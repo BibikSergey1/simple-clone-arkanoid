@@ -48,7 +48,6 @@ void Game::gameStart()
     m_pixmap_wall_v.load(":/images/wall_ver.png");
 
     m_pixmap_block.load(":/images/block.png");
-    //m_pixmap_block = m_pixmap_block.scaled(150, 100);//40, 20
     m_pixmap_block = m_pixmap_block.scaled(40, 25);
 
     m_pixmap_block_blue.load(":/images/block_blue.png");
@@ -160,31 +159,17 @@ void Game::createLevel()
         return;
     }
 
-
-    //QString level_1 = "BB";
-
-//    m_num_block_rows = 2;
-//    m_num_block_cols = 1;
-
     m_num_block_rows = 6;
     m_num_block_cols = 11;
 
     m_block_width  = 40;
     m_block_height = 25;
 
-//    m_block_width  = 150;
-//    m_block_height = 100;
-
     m_block_x_gap = 42;
     m_block_y_gap = 27;
-//    m_block_x_gap = 282;
-//    m_block_y_gap = 222;
 
     m_block_origin_x = 92;
     m_block_origin_y = 54;
-
-//    m_block_origin_x = 94;
-//    m_block_origin_y = 132;
 
     int x1 = m_block_origin_x;
     int y1 = m_block_origin_y;
@@ -203,15 +188,11 @@ void Game::createLevel()
             if(level.at(col+row*m_num_block_cols) == "B")
             {
                 m_sprite_block = new Sprite(m_pixmap_block, m_bounds, BA_BOUNCE);
-                //m_sprite_block->setPosition(x1, y1);
-                //m_game_engine->addSprite(m_sprite_block);
                 ++m_count_blocks;
             }
             else if(level.at(col+row*m_num_block_cols) == "U")
             {
                 m_sprite_block = new Sprite(m_pixmap_block_blue, m_bounds, BA_BOUNCE);
-                //m_sprite_block->setPosition(x1, y1);
-                //m_game_engine->addSprite(m_sprite_block);
                 ++m_count_blocks;
             }
 
@@ -289,12 +270,6 @@ void Game::gamePaint(QPainter* p)
 
             if (m_pause)
                 p->drawPixmap(m_width_wnd/2-m_pixmap_pause.width()/2, m_height_wnd/3, m_pixmap_pause);
-
-            //p->setPen(Qt::blue);
-            //p->drawRect(m_rect_centr_paddle);
-            //p->setPen(Qt::red);
-            //p->drawRect(m_rect_left_paddle);
-            //p->drawRect(m_rect_right_paddle);
         }
         else
         {
@@ -556,6 +531,7 @@ void Game::processKeys()
         m_sprite_paddle->setVelocity(0, m_sprite_paddle->getVelocity().y());
     }
 }
+
 // Returns a random number in [low, high].
 int Game::random(int low, int high)
 {

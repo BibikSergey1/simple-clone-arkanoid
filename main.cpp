@@ -9,10 +9,5 @@ int main(int argc, char *argv[])
     Widget w;
     w.show();
 
-    int result;
-    result = a.exec();
-
-
-
-    return result;
+    return a.exec();
 }
