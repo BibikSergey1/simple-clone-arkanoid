@@ -71,14 +71,8 @@ private:
     static std::unique_ptr<Game> m_instance;
 
     // field
-    int m_num_block_rows;
-    int m_num_block_cols;
-    int m_block_origin_x;
-    int m_block_origin_y;
-    int m_block_width;
-    int m_block_height;
-    int m_block_x_gap;
-    int m_block_y_gap;
+    int m_num_rows = 14;
+    int m_num_cols = 19;
 
     // paddle
     bool m_left;

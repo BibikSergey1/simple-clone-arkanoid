@@ -85,8 +85,8 @@ void Game::createWalls()
     int x1 = 0;
     int y1 = 0;
 
-    int num_rows = 14;
-    int num_cols = 19;
+    m_num_rows = 14;
+    m_num_cols = 19;
 
     int w_hor = m_pixmap_wall_h.width();
     int h_hor = m_pixmap_wall_h.height();
@@ -95,23 +95,23 @@ void Game::createWalls()
 
     int gap = 2;
 
-    for(int row = 0; row < num_rows; ++row)
+    for(int row = 0; row < m_num_rows; ++row)
     {
         x1 = 0;
-        for(int col = 0; col < num_cols; ++col)
+        for(int col = 0; col < m_num_cols; ++col)
         {
-            if(walls.at(col+row*num_cols) == " ")
+            if(walls.at(col+row*m_num_cols) == " ")
             {
                 x1+=(w_hor*2);
                 continue;
             }
-            else if(walls.at(col+row*num_cols) == "-")
+            else if(walls.at(col+row*m_num_cols) == "-")
             {
                 m_sprite_wall_h = new Sprite(m_pixmap_wall_h, m_bounds, BA_STOP);
                 m_sprite_wall_h->setPosition(x1, y1);
                 m_game_engine->addSprite(m_sprite_wall_h);
             }
-            else if(walls.at(col+row*num_cols) == "|")
+            else if(walls.at(col+row*m_num_cols) == "|")
             {
                 m_sprite_wall_v = new Sprite(m_pixmap_wall_v, m_bounds, BA_STOP);
                 m_sprite_wall_v->setPosition(x1, y1);
@@ -159,17 +159,14 @@ void Game::createLevel()
         return;
     }
 
-    m_num_block_rows = 6;
-    m_num_block_cols = 11;
+    int m_num_block_rows = 6;
+    int m_num_block_cols = 11;
 
-    m_block_width  = 40;
-    m_block_height = 25;
+    int m_block_x_gap = 42;
+    int m_block_y_gap = 27;
 
-    m_block_x_gap = 42;
-    m_block_y_gap = 27;
-
-    m_block_origin_x = 92;
-    m_block_origin_y = 54;
+    int m_block_origin_x = 92;
+    int m_block_origin_y = 54;
 
     int x1 = m_block_origin_x;
     int y1 = m_block_origin_y;
@@ -265,7 +262,7 @@ void Game::gamePaint(QPainter* p)
         {
             m_game_engine->drawSprites(p);
 
-            for (int ii = 0; ii < m_num_lives; ii++)
+            for (int ii = 0; ii < m_num_lives; ++ii)
                 p->drawPixmap((m_width_wnd-(m_pixmap_paddle_sm.width()+7)*3)+((m_pixmap_paddle_sm.width()+5)*ii), 4, m_pixmap_paddle_sm);
 
             if (m_pause)

@@ -12,12 +12,12 @@ Widget::Widget(QWidget *parent)
     , m_left(false)
     , m_right(false)
     , m_pause(false)
-    , m_width(644)
-    , m_height(458)
+    , m_width(644) // width window:  19 cols*32(width col)+19 cols*2(gap)-2(border wnd)
+    , m_height(458) // height window: 13 rows*32(width row)+13 rows*2(gap)-16(height first row)-2(border wnd)
 {
     ui->setupUi(this);
-
     resize(m_width, m_height);
+
     m_timer_id = startTimer(8);
 
     Game::getInstance()->gameInitialize(width(), height());
