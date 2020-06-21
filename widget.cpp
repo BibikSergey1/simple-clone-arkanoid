@@ -20,7 +20,7 @@ Widget::Widget(QWidget *parent)
 
     m_timer_id = startTimer(8);
 
-    Game::getInstance()->gameInitialize(width(), height());
+    Game::getInstance()->gameInitialize(m_width, m_height);
     Game::getInstance()->gameStart();
 }
 
