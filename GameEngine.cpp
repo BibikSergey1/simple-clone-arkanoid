@@ -76,6 +76,24 @@ void GameEngine::cleanupSprites()
 //    }
 }
 
+void GameEngine::cleanupSprites(const QPixmap& pix)
+{
+    QList<Sprite*>::iterator siSprite;
+    for (siSprite = sprites_.begin(); siSprite != sprites_.end(); ++siSprite)
+    {
+        if ((*siSprite)->getPixmap() == pix)
+        {
+            (*siSprite)->kill();
+        }
+    }
+}
+
+int GameEngine::countSprites(const QPixmap& pix)
+{
+    int res = std::count_if(sprites_.begin(), sprites_.end(), [&](Sprite* item){return(item->getPixmap() == pix);});
+    return res;
+}
+
 void GameEngine::drawSprites(QPainter* p)
 {
     // Draw the sprites in the sprite vector

@@ -9,5 +9,7 @@
         <file>images/wall_hor.png</file>
         <file>images/wall_ver.png</file>
         <file>images/win.png</file>
+        <file>images/star1.png</file>
+        <file>images/star2.png</file>
     </qresource>
 </RCC>

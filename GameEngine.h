@@ -17,8 +17,14 @@ public:
 
     void addSprite(Sprite* pSprite);
     void cleanupSprites();
+    void cleanupSprites(const QPixmap& pix);
     void drawSprites(QPainter* p);
     void updateSprites();
+    int countSprites(const QPixmap& pix);
+
+    typedef QList<Sprite*>::const_iterator const_iterator;
+    const_iterator begin() const { return sprites_.begin(); }
+    const_iterator end()   const { return sprites_.end();   }
 
 protected:
     int width_, height_;

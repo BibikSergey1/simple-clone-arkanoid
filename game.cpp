@@ -61,6 +61,8 @@ void Game::gameStart()
     m_pixmap_win.load(":/images/win.png");
     m_pixmap_pause.load(":/images/pause.png");
 
+    m_bonus_red_star.load(":/images/star1.png");
+
     newGame();
 }
 
@@ -95,7 +97,7 @@ void Game::createWalls()
 
     int gap = 2;
 
-    for(int row = 0; row < m_num_rows; ++row)
+    for(int row = 0; row  < m_num_rows; ++row)
     {
         x1 = 0;
         for(int col = 0; col < m_num_cols; ++col)
@@ -108,13 +110,13 @@ void Game::createWalls()
             else if(walls.at(col+row*m_num_cols) == "-")
             {
                 m_sprite_wall_h = new Sprite(m_pixmap_wall_h, m_bounds, BA_STOP);
-                m_sprite_wall_h->setPosition(x1, y1);
+                m_sprite_wall_h->setPosition(x1, y1-h_hor);
                 m_game_engine->addSprite(m_sprite_wall_h);
             }
             else if(walls.at(col+row*m_num_cols) == "|")
             {
                 m_sprite_wall_v = new Sprite(m_pixmap_wall_v, m_bounds, BA_STOP);
-                m_sprite_wall_v->setPosition(x1, y1);
+                m_sprite_wall_v->setPosition(x1-w_hor, y1);
                 m_game_engine->addSprite(m_sprite_wall_v);
             }
 
@@ -209,37 +211,51 @@ void Game::newGame()
 
     m_bounds = QRect(0, 0, m_width_wnd, m_height_wnd);
 
+    // paddle
     QRect bounds_paddle = QRect(20, 0, m_width_wnd-38, m_height_wnd);
     m_sprite_paddle = new Sprite(m_pixmap_paddle, bounds_paddle, BA_STOP, this);
     m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
     m_game_engine->addSprite(m_sprite_paddle);
 
+    // walls
     createWalls();
+
+    // blocks
     m_level = 1;
     createLevel();
 
-    m_sprite_ball = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
-    m_sprite_ball->setPosition(m_width_wnd/2-m_sprite_ball->getWidth()/2,
-                               m_sprite_paddle->getPosition().y()-m_sprite_ball->getHeight());
-    m_game_engine->addSprite(m_sprite_ball);
-
-    m_vel_x = 2;
-    m_vel_y = 2;
+    // ball
+    m_count_balls = 1;
+    for(int ii = 0; ii < m_count_balls; ++ii)
+    {
+        m_sprite_ball[ii] = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
+        m_sprite_ball[ii]->setPosition(m_width_wnd/2-m_sprite_ball[ii]->getWidth()/2,
+                                   m_sprite_paddle->getPosition().y()-m_sprite_ball[ii]->getHeight());
+        m_game_engine->addSprite(m_sprite_ball[ii]);
+    }
 
     auto lbd = [&]()
     {
-        m_sprite_ball->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+        m_vel_x = 2;
+        m_vel_y = 2;
+
+        for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
+        {
+            if ((*it)->getPixmap() == m_pixmap_ball)
+                (*it)->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+        }
     };
 
     QTimer::singleShot(1500, this, lbd);
 
+    // Background
     m_background.reset(new StarryBackground(m_width_wnd, m_height_wnd));
 
+    m_pause = false;
     m_num_lives = 3;
     m_game_over = false;
     m_game_win = false;
     next_level = false;
-    m_pause = false;
 }
 
 void Game::gameActivate()
@@ -281,6 +297,8 @@ void Game::gamePaint(QPainter* p)
 
 void Game::gameCycle()
 {
+    m_background->update();
+
     if (!m_game_over)
     {
         if (!m_game_win)
@@ -289,7 +307,6 @@ void Game::gameCycle()
             {
                 processKeys();
 
-                m_background->update();
                 m_game_engine->updateSprites();
             }
         }
@@ -306,14 +323,21 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                                                         pHittee == m_pixmap_wall_h ||
                                                         pHittee == m_pixmap_wall_v))
     {
-        collisionBallWithBricks(pSpriteHitter, pSpriteHittee);
+        collisBallBricks(pSpriteHitter, pSpriteHittee);
 
         return true;
     }
 
     if(pHitter == m_pixmap_ball && pHittee == m_pixmap_paddle)
     {
-        collisionBallWithPaddle(pSpriteHitter, pSpriteHittee);
+        collisBallPaddle(pSpriteHitter, pSpriteHittee);
+
+        return true;
+    }
+
+    if((pHitter == m_bonus_red_star) && pHittee == m_pixmap_paddle)
+    {
+        collisBonusPaddle(pSpriteHitter, pSpriteHittee);
 
         return true;
     }
@@ -321,7 +345,7 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     return false;
 }
 
-void Game::collisionBallWithPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
+void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 {
     int gap = 10;
     QRect rect_centr_paddle(pSpriteHittee->getPosition().x()+gap, pSpriteHittee->getPosition().y(),
@@ -372,8 +396,79 @@ void Game::collisionBallWithPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     }
 }
 
-void Game::collisionBallWithBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
+void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 {
+    QRect rect_paddle(pSpriteHittee->getPosition().x(), pSpriteHittee->getPosition().y(),
+                            pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
+
+    QPoint leftPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
+            QPoint(0, pSpriteHitter->getHeight()/2);
+
+    QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
+            QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
+
+    QPoint bottomBonus = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
+            QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
+
+
+    if(rect_paddle.contains(bottomBonus) || rect_paddle.contains(leftPosBall)
+            || rect_paddle.contains(rightPosBall))
+    {
+        pSpriteHitter->kill();
+
+        if (pSpriteHitter->getPixmap() == m_bonus_red_star)
+        {
+            m_count_balls = 2;
+            for(int ii = 0; ii < m_count_balls; ++ii)
+            {
+                Sprite* sprite_ball = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
+
+                for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
+                {
+                    if ((*it)->getPixmap() == m_pixmap_ball)
+                    {
+                        sprite_ball->setPosition((*it)->getPosition());
+                    }
+                }
+
+                sprite_ball->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+                m_game_engine->addSprite(sprite_ball);
+            }
+        }
+    }
+}
+
+void Game::createNewLevel(Sprite* pSpriteHitter)
+{
+    pSpriteHitter->setPosition(m_width_wnd/2-m_pixmap_ball.width()/2,
+                               m_sprite_paddle->getPosition().y()-m_pixmap_ball.height());
+    pSpriteHitter->kill();
+    m_game_engine.get()->cleanupSprites(m_pixmap_ball);
+
+    next_level = true;
+    ++m_level;
+    createLevel();
+    m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
+}
+
+void Game::checkRandomBonus(Sprite* pSpriteHitter)
+{
+    int roll = random(0, 20);
+    if(roll >= 19 && roll <= 20)
+    {
+        // bonus balls
+        Sprite* sprt_red_star = new Sprite(m_bonus_red_star, m_bounds, BA_DIE, this);
+        sprt_red_star->setPosition(pSpriteHitter->getPosition());
+        sprt_red_star->setVelocity(0, 1);
+        m_game_engine->addSprite(sprt_red_star);
+    }
+}
+
+void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
+{
+    if (next_level)
+        return;
+
     QRect rect_brick(pSpriteHittee->getPosition().x(), pSpriteHittee->getPosition().y(),
                      pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
 
@@ -398,7 +493,16 @@ void Game::collisionBallWithBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         }
 
         if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
+        {
+            checkRandomBonus(pSpriteHitter);
             pSpriteHittee->kill();
+            --m_count_blocks;
+        }
+
+        if(m_count_blocks == 0)
+        {
+            createNewLevel(pSpriteHitter);
+        }
 
         return;
     }
@@ -412,7 +516,16 @@ void Game::collisionBallWithBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         }
 
         if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
+        {
+            checkRandomBonus(pSpriteHitter);
             pSpriteHittee->kill();
+            --m_count_blocks;
+        }
+
+        if(m_count_blocks == 0)
+        {
+            createNewLevel(pSpriteHitter);
+        }
 
         return;
     }
@@ -426,7 +539,16 @@ void Game::collisionBallWithBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         }
 
         if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
+        {
+            checkRandomBonus(pSpriteHitter);
             pSpriteHittee->kill();
+            --m_count_blocks;
+        }
+
+        if(m_count_blocks == 0)
+        {
+            createNewLevel(pSpriteHitter);
+        }
 
         return;
     }
@@ -440,7 +562,16 @@ void Game::collisionBallWithBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         }
 
         if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
+        {
+            checkRandomBonus(pSpriteHitter);
             pSpriteHittee->kill();
+            --m_count_blocks;
+        }
+
+        if(m_count_blocks == 0)
+        {
+            createNewLevel(pSpriteHitter);
+        }
 
         return;
     }
@@ -453,50 +584,52 @@ void Game::addEnemy()
 
 void Game::spriteDying(Sprite* pSprite)
 {
-    if(pSprite->getPixmap() == m_pixmap_block || pSprite->getPixmap() == m_pixmap_block_blue)
-    {
-        --m_count_blocks;
-
-        if(m_count_blocks == 0)
-        {
-            m_sprite_ball->setPosition(m_width_wnd/2-m_sprite_ball->getWidth()/2,
-                                       m_sprite_paddle->getPosition().y()-m_sprite_ball->getHeight());
-            m_sprite_ball->kill();
-            next_level = true;
-            ++m_level;
-            createLevel();
-            m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
-        }
-    }
-
     if (pSprite->getPixmap() == m_pixmap_ball)
     {
-        if (!next_level)
+        m_count_balls = m_game_engine.get()->countSprites(m_pixmap_ball);
+
+        if (next_level == false && m_count_balls == 1)
         {
             --m_num_lives;
         }
 
-        next_level = false;
+//        next_level = false;
 
         if (m_num_lives == 0)
         {
             m_game_over = true;
         }
 
-        m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
-
-        m_sprite_ball = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
-        m_sprite_ball->setPosition(m_width_wnd/2-m_sprite_ball->getWidth()/2,
-                                   m_sprite_paddle->getPosition().y()-m_sprite_ball->getHeight());
-        m_game_engine->addSprite(m_sprite_ball);
-
-        auto lbd = [&]()
+        if(m_count_balls == 1)
         {
-            m_sprite_ball->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
-        };
+            m_game_engine.get()->cleanupSprites(m_bonus_red_star);
 
-        QTimer::singleShot(1500, this, lbd);
+            m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
 
+            m_count_balls = 1;
+            for(int ii = 0; ii < m_count_balls; ++ii)
+            {
+                m_sprite_ball[ii] = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
+                m_sprite_ball[ii]->setPosition(m_width_wnd/2-m_sprite_ball[ii]->getWidth()/2,
+                                           m_sprite_paddle->getPosition().y()-m_sprite_ball[ii]->getHeight());
+                m_game_engine->addSprite(m_sprite_ball[ii]);
+            }
+
+            auto lbd = [&]()
+            {
+                m_vel_x = 2;
+                m_vel_y = 2;
+
+                for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
+                {
+                    next_level = false;
+                    if ((*it)->getPixmap() == m_pixmap_ball)
+                        (*it)->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+                }
+            };
+
+            QTimer::singleShot(1500, this, lbd);
+        }
     }
 }
 
