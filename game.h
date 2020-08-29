@@ -37,11 +37,14 @@ private:
     Game& operator=( Game& );
 
     void createLevel();
+    void createNewLevel(Sprite* pSpriteHitter);
     void createWalls();
-    void collisionBallWithBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
-    void collisionBallWithPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
+    void collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
+    void collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
+    void collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     int random(int a, int b);
     void processKeys();
+    void checkRandomBonus(Sprite* pSpriteHitter);
 
     QRect m_bounds;
     std::unique_ptr<GameEngine> m_game_engine;
@@ -56,13 +59,15 @@ private:
     QPixmap m_pixmap_game_over;
     QPixmap m_pixmap_win;
     QPixmap m_pixmap_pause;
+    QPixmap m_bonus_red_star;
 
     std::unique_ptr<StarryBackground> m_background;
 
     Sprite* m_sprite_wall_h;
     Sprite* m_sprite_wall_v;
     Sprite* m_sprite_block;
-    Sprite* m_sprite_ball;
+    enum {BALLS=2};
+    Sprite* m_sprite_ball[BALLS];
     Sprite* m_sprite_paddle;
 
     int m_width_wnd;
@@ -89,9 +94,10 @@ private:
     int m_level;
     int m_count_blocks;
 
-    // ball
+    // balls
     int m_vel_x;
     int m_vel_y;
+    int m_count_balls;
 
     bool m_pause;
 };
