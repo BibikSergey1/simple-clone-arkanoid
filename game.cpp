@@ -4,6 +4,8 @@
 #include <QBitmap>
 #include <QTime>
 #include <QTimer>
+#include <QRandomGenerator>
+#include <widget.h>
 
 std::unique_ptr<Game> Game::m_instance = nullptr;
 
@@ -14,21 +16,28 @@ Game::Game(QObject* parent)
 
 Game* Game::getInstance()
 {
-    if(!m_instance.get())
+    if(!m_instance)
+    {
         m_instance.reset(new Game());
+        qDebug() << "Game instance created";
+    }
 
     return m_instance.get();
 }
 
 bool Game::gameInitialize(int w, int h)
 {
+    if (m_game_engine)
+    {
+        qDebug() << "Reinitializing game";
+    }
+
     m_game_engine.reset(new GameEngine(w, h));
-    if(m_game_engine == nullptr)
-        return false;
 
     m_width_wnd = w;
     m_height_wnd = h;
 
+    qDebug() << "Game initialized";
     return true;
 }
 
@@ -40,30 +49,19 @@ void Game::gameEnd()
 
 void Game::gameStart()
 {
-    qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+    initRandomGenerator();
 
-    m_pixmap_paddle.load(":/images/paddle.png");
-    m_pixmap_paddle_sm = m_pixmap_paddle.scaled(22, 8);
-    m_pixmap_wall_h.load(":/images/wall_hor.png");
-    m_pixmap_wall_v.load(":/images/wall_ver.png");
+    if (!loadTextures())
+    {
+        qCritical() << "Failed to load textures";
+        return;
+    }
 
-    m_pixmap_block.load(":/images/block.png");
-    m_pixmap_block = m_pixmap_block.scaled(40, 25);
-
-    m_pixmap_block_blue.load(":/images/block_blue.png");
-    m_pixmap_block_blue = m_pixmap_block_blue.scaled(40, 25);
-
-    m_pixmap_ball.load(":/images/ball.png");
-    m_pixmap_ball = m_pixmap_ball.scaled(12,12);
-    m_pixmap_ball.setMask(m_pixmap_ball.createMaskFromColor(QColor(0,0,0)));
-
-    m_pixmap_game_over.load(":/images/game_over.png");
-    m_pixmap_win.load(":/images/win.png");
-    m_pixmap_pause.load(":/images/pause.png");
-
-    m_bonus_red_star.load(":/images/star1.png");
+    setupBallMask();
 
     newGame();
+
+    qDebug() << "Game started with all resources loaded";
 }
 
 void Game::createWalls()
@@ -666,4 +664,79 @@ void Game::processKeys()
 int Game::random(int low, int high)
 {
     return low + rand() % ((high + 1) - low);
+}
+
+void Game::initRandomGenerator()
+{
+    auto seed = QTime::currentTime().msecsSinceStartOfDay();
+    QRandomGenerator::securelySeeded().seed(seed);
+    qDebug() << "Random generator initialized with seed:" << seed;
+}
+
+bool Game::loadTextures()
+{
+    bool success = true;
+
+    auto loadPixmap = [&success](const QString& path) -> QPixmap
+    {
+        QPixmap pixmap(path);
+        if (pixmap.isNull())
+        {
+            qWarning() << "Failed to load:" << path;
+            success = false;
+        }
+        return pixmap;
+    };
+
+    m_pixmap_paddle = loadPixmap(":/images/paddle.png");
+    m_pixmap_wall_h = loadPixmap(":/images/wall_hor.png");
+    m_pixmap_wall_v = loadPixmap(":/images/wall_ver.png");
+    m_pixmap_block = loadPixmap(":/images/block.png");
+    m_pixmap_block_blue = loadPixmap(":/images/block_blue.png");
+    m_pixmap_ball = loadPixmap(":/images/ball.png");
+    m_pixmap_game_over = loadPixmap(":/images/game_over.png");
+    m_pixmap_win = loadPixmap(":/images/win.png");
+    m_pixmap_pause = loadPixmap(":/images/pause.png");
+    m_bonus_red_star = loadPixmap(":/images/star1.png");
+
+    // Масштабирование с правильными параметрами
+    scaleTextures();
+
+    return success;
+}
+
+void Game::scaleTextures()
+{
+    // Масштабируем с отключенным сглаживанием для четкости
+    auto scaleFast = [](QPixmap& pix, const QSize& size)
+    {
+        if (!pix.isNull())
+        {
+            pix = pix.scaled(size, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        }
+    };
+
+    scaleFast(m_pixmap_paddle_sm, PADDLE_SMALL);
+    scaleFast(m_pixmap_block, BLOCK_SIZE);
+    scaleFast(m_pixmap_block_blue, BLOCK_SIZE);
+    scaleFast(m_pixmap_ball, BALL_SIZE);
+
+    // Маленькая версия платформы
+    if (!m_pixmap_paddle.isNull())
+    {
+        m_pixmap_paddle_sm = m_pixmap_paddle.scaled(PADDLE_SMALL.width(), PADDLE_SMALL.height(),
+                                                    Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    }
+}
+
+void Game::setupBallMask()
+{
+    if (!m_pixmap_ball.isNull())
+    {
+        // Создаем маску на основе черного цвета (0,0,0)
+        QColor black(0, 0, 0);
+        QBitmap mask = m_pixmap_ball.createMaskFromColor(black);
+        m_pixmap_ball.setMask(mask);
+        qDebug() << "Ball mask created";
+    }
 }

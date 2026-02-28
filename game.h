@@ -32,9 +32,13 @@ private:
 private slots:
 
 private:
-    Game(QObject* parent = nullptr);
-    Game( const Game& );
-    Game& operator=( Game& );
+    explicit Game(QObject* parent = nullptr);
+
+    Game(const Game&) = delete;
+    Game& operator=(Game&) = delete;
+
+    Game(Game&&) = delete;
+    Game& operator=(Game&&) = delete;
 
     void createLevel();
     void createNewLevel(Sprite* pSpriteHitter);
@@ -45,6 +49,10 @@ private:
     int random(int a, int b);
     void processKeys();
     void checkRandomBonus(Sprite* pSpriteHitter);
+    void initRandomGenerator();
+    bool loadTextures();
+    void scaleTextures();
+    void setupBallMask();
 
     QRect m_bounds;
     std::unique_ptr<GameEngine> m_game_engine;

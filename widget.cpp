@@ -7,19 +7,6 @@
 #include <QTime>
 #include "game.h"
 
-namespace
-{
-constexpr int CELL_SIZE = 32;
-constexpr int GRID_GAP = 2;
-constexpr int BORDER_WIDTH = 2;
-constexpr int FIRST_ROW_OFFSET = 16;
-
-constexpr int GRID_COLS = 19;
-constexpr int GRID_ROWS = 13;
-
-constexpr int WINDOW_WIDTH = GRID_COLS * CELL_SIZE + (GRID_COLS - 1) * GRID_GAP - BORDER_WIDTH;
-constexpr int WINDOW_HEIGHT = GRID_ROWS * CELL_SIZE + (GRID_ROWS - 1) * GRID_GAP - FIRST_ROW_OFFSET - BORDER_WIDTH;
-}
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -142,6 +129,7 @@ void Widget::timerEvent(QTimerEvent *event)
     // Проверяем паузу
     if (m_pause)
     {
+        update();
         return;
     }
 

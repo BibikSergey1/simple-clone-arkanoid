@@ -4,6 +4,25 @@
 #include <QEvent>
 #include <memory>
 
+namespace
+{
+constexpr int CELL_SIZE = 32;
+constexpr int GRID_GAP = 2;
+constexpr int BORDER_WIDTH = 2;
+constexpr int FIRST_ROW_OFFSET = 16;
+
+constexpr int GRID_COLS = 19;
+constexpr int GRID_ROWS = 13;
+
+constexpr int WINDOW_WIDTH = GRID_COLS * CELL_SIZE + (GRID_COLS - 1) * GRID_GAP - BORDER_WIDTH;
+constexpr int WINDOW_HEIGHT = GRID_ROWS * CELL_SIZE + (GRID_ROWS - 1) * GRID_GAP - FIRST_ROW_OFFSET - BORDER_WIDTH;
+
+constexpr QSize BLOCK_SIZE(40, 25);
+constexpr QSize BALL_SIZE(12, 12);
+constexpr QSize PADDLE_SMALL(22, 8);
+constexpr QSize PADDLE_NORMAL(80, 20);
+}
+
 class Ui_Widget;
 
 class Widget : public QWidget
