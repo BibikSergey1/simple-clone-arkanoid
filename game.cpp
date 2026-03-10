@@ -210,9 +210,9 @@ void Game::newGame()
     m_bounds = QRect(0, 0, m_width_wnd, m_height_wnd);
 
     // paddle
-    QRect bounds_paddle = QRect(20, 0, m_width_wnd-38, m_height_wnd);
+    QRect bounds_paddle = QRect(PADDLE_MARGIN_LEFT, 0, m_width_wnd-PADDLE_MARGIN_RIGHT, m_height_wnd);
     m_sprite_paddle = new Sprite(m_pixmap_paddle, bounds_paddle, BA_STOP, this);
-    m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
+    m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, PADDLE_Y);
     m_game_engine->addSprite(m_sprite_paddle);
 
     // walls
@@ -222,9 +222,9 @@ void Game::newGame()
     m_level = 1;
     createLevel();
 
-    // ball
+    // balls
     m_count_balls = 1;
-    for(int ii = 0; ii < m_count_balls; ++ii)
+    for (int ii = 0; ii < m_count_balls; ++ii)
     {
         m_sprite_ball[ii] = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
         m_sprite_ball[ii]->setPosition(m_width_wnd/2-m_sprite_ball[ii]->getWidth()/2,
@@ -232,22 +232,25 @@ void Game::newGame()
         m_game_engine->addSprite(m_sprite_ball[ii]);
     }
 
-    auto lbd = [&]()
+    QTimer::singleShot(DELAY_MS, this, [this]()
     {
-        m_vel_x = 2;
-        m_vel_y = 2;
+        if (!m_game_engine)
+            return;
 
-        for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
+        m_vel_x = BALL_SPEED;
+        m_vel_y = BALL_SPEED;
+
+        for (auto& sprite : *m_game_engine)
         {
-            if ((*it)->getPixmap() == m_pixmap_ball)
-                (*it)->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+            if (sprite->getPixmap().cacheKey() == m_pixmap_ball.cacheKey())
+            {
+                sprite->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+            }
         }
-    };
-
-    QTimer::singleShot(1500, this, lbd);
+    });
 
     // Background
-    m_background.reset(new StarryBackground(m_width_wnd, m_height_wnd));
+    m_background = std::make_unique<StarryBackground>(m_width_wnd, m_height_wnd);
 
     m_pause = false;
     m_num_lives = 3;

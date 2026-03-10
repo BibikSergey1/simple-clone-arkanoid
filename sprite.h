@@ -62,7 +62,7 @@ protected:
     QRect rect_collision_;
     QPoint point_velocity_;
     int zorder_;
-    QRect rect_bounds_; // ограничивающий прямоугольник
+    QRect rect_bounds_; // РѕРіСЂР°РЅРёС‡РёРІР°СЋС‰РёР№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє
 
     BOUNDSACTION  bounds_action_;
     bool hidden_;

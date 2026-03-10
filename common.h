@@ -7,7 +7,7 @@ enum SPRITEACTION  {SA_NONE      = 0,
 
 enum BOUNDSACTION {  BA_STOP   = 0,
                      BA_WRAP   = 1,
-                     BA_BOUNCE = 2, // отскок
+                     BA_BOUNCE = 2, // РѕС‚СЃРєРѕРє
                      BA_DIE    = 3};
 
 #endif // COMMON_H
