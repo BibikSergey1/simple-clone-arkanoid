@@ -131,27 +131,26 @@ void Game::createWalls()
 void Game::createLevel()
 {
     m_count_blocks = 0;
-
     QString level;
     if(m_level == 1)
     {
         level =
-        "BBBBBUBBBBB"
-        "BBBBUUBBBBB"
-        " BBBBUBBBB "
-        "  BBBUBBB  "
-        "   BBUBB   "
-        "    UUU    ";
+            "RRRRRRRRRRR"
+            "RBBBUUBBBBR"
+            " RBBBUBBBR "
+            "  RBBUBBR  "
+            "   RBUBR   "
+            "    UUU    ";
     }
     else if(m_level == 2)
     {
         level =
-        "    UUU    "
-        "   BUBUB   "
-        "  BBBBUBB  "
-        " BBBBUBBBB "
-        " BBBUBBBBB "
-        "BBBBUUUBBBB";
+            "    UUU    "
+            "   RUBUR   "
+            "  RBBBUBR  "
+            " RBBBUBBBR "
+            " RBBUBBBBR "
+            "RRRRUUURRRR";
     }
     else if(m_level == 3)
     {
@@ -161,44 +160,49 @@ void Game::createLevel()
 
     int m_num_block_rows = 6;
     int m_num_block_cols = 11;
-
     int m_block_x_gap = 42;
     int m_block_y_gap = 27;
-
     int m_block_origin_x = 92;
     int m_block_origin_y = 54;
 
-    int x1 = m_block_origin_x;
     int y1 = m_block_origin_y;
-
     for(int row = 0; row < m_num_block_rows; ++row)
     {
-        x1 = m_block_origin_x;
+        int x1 = m_block_origin_x;
         for(int col = 0; col < m_num_block_cols; ++col)
         {
-            if(level.at(col+row*m_num_block_cols) == " ")
+            QChar ch = level.at(col + row * m_num_block_cols);
+            if(ch == ' ')
             {
-                x1+=m_block_x_gap;
+                x1 += m_block_x_gap;
                 continue;
             }
 
-            if(level.at(col+row*m_num_block_cols) == "B")
+            Sprite* pBlock = nullptr;
+            if(ch == 'B')
             {
-                m_sprite_block = new Sprite(m_pixmap_block, m_bounds, BA_BOUNCE);
+                pBlock = new Sprite(m_pixmap_block, m_bounds, BA_BOUNCE);
                 ++m_count_blocks;
             }
-            else if(level.at(col+row*m_num_block_cols) == "U")
+            else if(ch == 'U')
             {
-                m_sprite_block = new Sprite(m_pixmap_block_blue, m_bounds, BA_BOUNCE);
+                pBlock = new Sprite(m_pixmap_block_blue, m_bounds, BA_BOUNCE);
                 ++m_count_blocks;
             }
+            else if(ch == 'R')   // новый тип блока – два удара
+            {
+                pBlock = new Sprite(m_pixmap_block_2hit, m_bounds, BA_BOUNCE);
+                ++m_count_blocks;   // считаем как один блок, но с двумя жизнями
+            }
 
-            m_sprite_block->setPosition(x1, y1);
-            m_game_engine->addSprite(m_sprite_block);
-
-            x1+=m_block_x_gap;
+            if(pBlock)
+            {
+                pBlock->setPosition(x1, y1);
+                m_game_engine->addSprite(pBlock);
+            }
+            x1 += m_block_x_gap;
         }
-        y1+=m_block_y_gap;
+        y1 += m_block_y_gap;
     }
 }
 
@@ -319,9 +323,11 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     const QPixmap& pHittee = pSpriteHittee->getPixmap();
 
     if(pHitter == m_pixmap_ball && (pHittee == m_pixmap_block ||
-                                                        pHittee == m_pixmap_block_blue ||
-                                                        pHittee == m_pixmap_wall_h ||
-                                                        pHittee == m_pixmap_wall_v))
+                                     pHittee == m_pixmap_block_blue ||
+                                     pHittee == m_pixmap_block_2hit ||
+                                     pHittee == m_pixmap_block_damaged ||
+                                     pHittee == m_pixmap_wall_h ||
+                                     pHittee == m_pixmap_wall_v))
     {
         collisBallBricks(pSpriteHitter, pSpriteHittee);
 
@@ -442,15 +448,19 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
 void Game::createNewLevel(Sprite* pSpriteHitter)
 {
-    pSpriteHitter->setPosition(m_width_wnd/2-m_pixmap_ball.width()/2,
-                               m_sprite_paddle->getPosition().y()-m_pixmap_ball.height());
     pSpriteHitter->kill();
-    m_game_engine.get()->cleanupSprites(m_pixmap_ball);
+    m_game_engine->cleanupSprites(m_pixmap_ball);   // удаляем все мячи
+
+    // Удаляем все типы блоков
+    m_game_engine->cleanupSprites(m_pixmap_block);
+    m_game_engine->cleanupSprites(m_pixmap_block_blue);
+    m_game_engine->cleanupSprites(m_pixmap_block_2hit);
+    m_game_engine->cleanupSprites(m_pixmap_block_damaged);
 
     next_level = true;
     ++m_level;
     createLevel();
-    m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
+    m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, 400);
 }
 
 void Game::checkRandomBonus(Sprite* pSpriteHitter)
@@ -544,14 +554,30 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
         pSpriteHitter->setVelocity(vel);
 
-        if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
+        const QPixmap& blockPix = pSpriteHittee->getPixmap();
+
+        if (blockPix == m_pixmap_block_2hit)
         {
+            // первый удар – заменяем текстуру на повреждённую
+            pSpriteHittee->setPixmap(m_pixmap_block_damaged);
+            // m_count_blocks не уменьшаем, блок ещё жив
+        }
+        else if (blockPix == m_pixmap_block_damaged)
+        {
+            // второй удар – уничтожаем
+            checkRandomBonus(pSpriteHitter);
+            pSpriteHittee->kill();
+            --m_count_blocks;
+        }
+        else if (blockPix == m_pixmap_block || blockPix == m_pixmap_block_blue)
+        {
+            // обычный блок – уничтожаем сразу
             checkRandomBonus(pSpriteHitter);
             pSpriteHittee->kill();
             --m_count_blocks;
         }
 
-        if(m_count_blocks == 0)
+        if (m_count_blocks == 0)
         {
             createNewLevel(pSpriteHitter);
         }
@@ -681,6 +707,8 @@ bool Game::loadTextures()
     m_pixmap_win = loadPixmap(":/images/win.png");
     m_pixmap_pause = loadPixmap(":/images/pause.png");
     m_bonus_red_star = loadPixmap(":/images/star1.png");
+    m_pixmap_block_2hit = loadPixmap(":/images/block_2hit.png");
+    m_pixmap_block_damaged = loadPixmap(":/images/block_damaged.png");
 
     // Масштабирование с правильными параметрами
     scaleTextures();
@@ -703,6 +731,8 @@ void Game::scaleTextures()
     scaleFast(m_pixmap_block, BLOCK_SIZE);
     scaleFast(m_pixmap_block_blue, BLOCK_SIZE);
     scaleFast(m_pixmap_ball, BALL_SIZE);
+    scaleFast(m_pixmap_block_2hit, BLOCK_SIZE);
+    scaleFast(m_pixmap_block_damaged, BLOCK_SIZE);
 
     // Маленькая версия платформы
     if (!m_pixmap_paddle.isNull())

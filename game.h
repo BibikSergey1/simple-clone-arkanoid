@@ -68,6 +68,8 @@ private:
     QPixmap m_pixmap_win;
     QPixmap m_pixmap_pause;
     QPixmap m_bonus_red_star;
+    QPixmap m_pixmap_block_2hit;   // блок с двумя жизнями (неповреждённый)
+    QPixmap m_pixmap_block_damaged; // блок после первого удара
 
     std::unique_ptr<StarryBackground> m_background;
 

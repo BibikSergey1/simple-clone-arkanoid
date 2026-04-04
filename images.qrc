@@ -11,5 +11,7 @@
         <file>images/win.png</file>
         <file>images/star1.png</file>
         <file>images/star2.png</file>
+        <file>images/block_2hit.png</file>
+        <file>images/block_damaged.png</file>
     </qresource>
 </RCC>
