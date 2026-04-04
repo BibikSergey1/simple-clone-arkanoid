@@ -20,7 +20,7 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
     resize(m_contentWidth, m_contentHeight);
 
-    m_timer_id = startTimer(8);
+    m_timer_id = startTimer(16);
 
     auto* game = Game::getInstance();
     if (game)

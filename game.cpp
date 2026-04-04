@@ -307,7 +307,6 @@ void Game::gameCycle()
             if(!m_pause)
             {
                 processKeys();
-
                 m_game_engine->updateSprites();
             }
         }
@@ -362,39 +361,41 @@ void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     m_rect_right_paddle = rect_right_paddle;
 
     QPoint bottomPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
+                           QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
 
+    if(pSpriteHitter->getVelocity().y() <= 0)
+        return;
 
     if(rect_left_paddle.contains(bottomPosBall))
     {
-        if(pSpriteHitter->getVelocity().y() > 0)
-        {
-            pSpriteHitter->setVelocity(-m_vel_x, -pSpriteHitter->getVelocity().y());
-        }
-
-        return;
+        pSpriteHitter->setVelocity(-m_vel_x, -pSpriteHitter->getVelocity().y());
     }
-
-    if(rect_centr_paddle.contains(bottomPosBall))
+    else if(rect_centr_paddle.contains(bottomPosBall))
     {
-        if(pSpriteHitter->getVelocity().y() > 0)
-        {
-            pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
-                                       -pSpriteHitter->getVelocity().y());
-        }
-
-        return;
+        pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
+                                   -pSpriteHitter->getVelocity().y());
     }
-
-    if(rect_right_paddle.contains(bottomPosBall))
+    else if(rect_right_paddle.contains(bottomPosBall))
     {
-        if(pSpriteHitter->getVelocity().y() > 0)
-        {
-            pSpriteHitter->setVelocity(2, -pSpriteHitter->getVelocity().y());
-        }
-
-        return;
+        pSpriteHitter->setVelocity(2, -pSpriteHitter->getVelocity().y());
     }
+    else
+    {
+        return; // Мяч не попал в ракетку
+    }
+
+    // Ограничиваем скорость после отскока
+    QPoint vel = pSpriteHitter->getVelocity();
+    vel.setX(qBound(-MAX_BALL_SPEED, vel.x(), MAX_BALL_SPEED));
+    vel.setY(qBound(-MAX_BALL_SPEED, vel.y(), MAX_BALL_SPEED));
+
+    // Гарантируем ненулевую горизонтальную скорость
+    if (vel.x() == 0 && vel.y() < 0)
+    {
+        vel.setX((random(0, 1) == 0) ? 2 : -2);
+    }
+
+    pSpriteHitter->setVelocity(vel);
 }
 
 void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
@@ -474,93 +475,74 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                      pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
 
     QPoint topPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(pSpriteHitter->getWidth()/2,0);
+                        QPoint(pSpriteHitter->getWidth()/2,0);
 
     QPoint bottomPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
+                           QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
 
     QPoint leftPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(0, pSpriteHitter->getHeight()/2);
+                         QPoint(0, pSpriteHitter->getHeight()/2);
 
     QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
+                          QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
+
+    bool collided = false;
 
     if(rect_brick.contains(leftPosBall))
     {
         if(pSpriteHitter->getVelocity().x() < 0)
         {
             pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
-                                        pSpriteHitter->getVelocity().y());
+                                       pSpriteHitter->getVelocity().y());
+            collided = true;
         }
-
-        if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
-        {
-            checkRandomBonus(pSpriteHitter);
-            pSpriteHittee->kill();
-            --m_count_blocks;
-        }
-
-        if(m_count_blocks == 0)
-        {
-            createNewLevel(pSpriteHitter);
-        }
-
-        return;
     }
-
-    if(rect_brick.contains(rightPosBall))
+    else if(rect_brick.contains(rightPosBall))
     {
         if(pSpriteHitter->getVelocity().x() > 0)
         {
             pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
                                        pSpriteHitter->getVelocity().y());
+            collided = true;
         }
-
-        if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
-        {
-            checkRandomBonus(pSpriteHitter);
-            pSpriteHittee->kill();
-            --m_count_blocks;
-        }
-
-        if(m_count_blocks == 0)
-        {
-            createNewLevel(pSpriteHitter);
-        }
-
-        return;
     }
-
-    if(rect_brick.contains(topPosBall))
+    else if(rect_brick.contains(topPosBall))
     {
         if(pSpriteHitter->getVelocity().y() < 0)
         {
             pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
                                        -pSpriteHitter->getVelocity().y());
+            collided = true;
         }
-
-        if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
-        {
-            checkRandomBonus(pSpriteHitter);
-            pSpriteHittee->kill();
-            --m_count_blocks;
-        }
-
-        if(m_count_blocks == 0)
-        {
-            createNewLevel(pSpriteHitter);
-        }
-
-        return;
     }
-
-    if(rect_brick.contains(bottomPosBall))
+    else if(rect_brick.contains(bottomPosBall))
     {
         if(pSpriteHitter->getVelocity().y() > 0)
         {
             pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
                                        -pSpriteHitter->getVelocity().y());
+            collided = true;
         }
+    }
+
+    if (collided)
+    {
+        // Ограничиваем скорость после отскока
+        QPoint vel = pSpriteHitter->getVelocity();
+        vel.setX(qBound(-MAX_BALL_SPEED, vel.x(), MAX_BALL_SPEED));
+        vel.setY(qBound(-MAX_BALL_SPEED, vel.y(), MAX_BALL_SPEED));
+
+        // Гарантируем ненулевую скорость
+        if (vel.x() == 0 && vel.y() != 0)
+        {
+            vel.setX((random(0, 1) == 0) ? 2 : -2);
+        }
+        if (vel.y() == 0 && vel.x() != 0)
+        {
+            vel.setY((random(0, 1) == 0) ? 2 : -2);
+        }
+
+        pSpriteHitter->setVelocity(vel);
 
         if(pSpriteHittee->getPixmap() == m_pixmap_block || pSpriteHittee->getPixmap() == m_pixmap_block_blue)
         {
@@ -573,8 +555,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         {
             createNewLevel(pSpriteHitter);
         }
-
-        return;
     }
 }
 
@@ -618,8 +598,8 @@ void Game::spriteDying(Sprite* pSprite)
 
             auto lbd = [&]()
             {
-                m_vel_x = 2;
-                m_vel_y = 2;
+                m_vel_x = BALL_SPEED;
+                m_vel_y = BALL_SPEED;
 
                 for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
                 {

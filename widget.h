@@ -27,7 +27,9 @@ static constexpr int PADDLE_MARGIN_LEFT = 20;
 static constexpr int PADDLE_MARGIN_RIGHT = 38;
 
 static constexpr int DELAY_MS = 1500;
-static constexpr int BALL_SPEED = 2;
+
+constexpr int BALL_SPEED = 3;  // Умеренная скорость
+constexpr int MAX_BALL_SPEED = 5;
 
 }
 
