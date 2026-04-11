@@ -189,7 +189,7 @@ void Game::createLevel()
                 pBlock = new Sprite(m_pixmap_block_blue, m_bounds, BA_BOUNCE);
                 ++m_count_blocks;
             }
-            else if(ch == 'R')   // новый тип блока – два удара
+            else if(ch == 'R')   // тип блока – два удара
             {
                 pBlock = new Sprite(m_pixmap_block_2hit, m_bounds, BA_BOUNCE);
                 ++m_count_blocks;   // считаем как один блок, но с двумя жизнями
