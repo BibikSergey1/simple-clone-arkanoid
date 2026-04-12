@@ -13,5 +13,6 @@
         <file>images/star2.png</file>
         <file>images/block_2hit.png</file>
         <file>images/block_damaged.png</file>
+        <file>images/block_solid.png</file>
     </qresource>
 </RCC>

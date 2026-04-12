@@ -70,6 +70,7 @@ private:
     QPixmap m_bonus_red_star;
     QPixmap m_pixmap_block_2hit;   // блок с двумя жизнями (неповреждённый)
     QPixmap m_pixmap_block_damaged; // блок после первого удара
+    QPixmap m_pixmap_block_solid;// не разрушаемый блок
 
     std::unique_ptr<StarryBackground> m_background;
 

@@ -132,7 +132,7 @@ void Game::createLevel()
 {
     m_count_blocks = 0;
     QString level;
-    if(m_level == 1)
+    if (m_level == 1)
     {
         level =
             "RRRRRRRRRRR"
@@ -142,7 +142,7 @@ void Game::createLevel()
             "   RBUBR   "
             "    UUU    ";
     }
-    else if(m_level == 2)
+    else if (m_level == 2)
     {
         level =
             "    UUU    "
@@ -152,7 +152,17 @@ void Game::createLevel()
             " RBBUBBBBR "
             "RRRRUUURRRR";
     }
-    else if(m_level == 3)
+    else if (m_level == 3)
+    {
+        level =
+            "BBBBUUBBBBB"
+            "BBBBBBUBBBB"
+            "SBBBUUBBBBS"
+            "SBBBBBUBBBS"
+            "SBBBUUBBBBS"
+            "SSSSSSSSSSS";
+    }
+    else if(m_level == 4)
     {
         m_game_win = true;
         return;
@@ -193,6 +203,10 @@ void Game::createLevel()
             {
                 pBlock = new Sprite(m_pixmap_block_2hit, m_bounds, BA_BOUNCE);
                 ++m_count_blocks;   // считаем как один блок, но с двумя жизнями
+            }
+            else if(ch == 'S')   // тип блока – неразбиваемый
+            {
+                pBlock = new Sprite(m_pixmap_block_solid, m_bounds, BA_BOUNCE);
             }
 
             if(pBlock)
@@ -326,6 +340,7 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                                      pHittee == m_pixmap_block_blue ||
                                      pHittee == m_pixmap_block_2hit ||
                                      pHittee == m_pixmap_block_damaged ||
+                                     pHittee == m_pixmap_block_solid ||
                                      pHittee == m_pixmap_wall_h ||
                                      pHittee == m_pixmap_wall_v))
     {
@@ -456,6 +471,7 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_block_blue);
     m_game_engine->cleanupSprites(m_pixmap_block_2hit);
     m_game_engine->cleanupSprites(m_pixmap_block_damaged);
+    m_game_engine->cleanupSprites(m_pixmap_block_solid);
 
     next_level = true;
     ++m_level;
@@ -709,6 +725,7 @@ bool Game::loadTextures()
     m_bonus_red_star = loadPixmap(":/images/star1.png");
     m_pixmap_block_2hit = loadPixmap(":/images/block_2hit.png");
     m_pixmap_block_damaged = loadPixmap(":/images/block_damaged.png");
+    m_pixmap_block_solid = loadPixmap(":/images/block_solid.png");
 
     // Масштабирование с правильными параметрами
     scaleTextures();
@@ -733,6 +750,7 @@ void Game::scaleTextures()
     scaleFast(m_pixmap_ball, BALL_SIZE);
     scaleFast(m_pixmap_block_2hit, BLOCK_SIZE);
     scaleFast(m_pixmap_block_damaged, BLOCK_SIZE);
+    scaleFast(m_pixmap_block_solid, BLOCK_SIZE);
 
     // Маленькая версия платформы
     if (!m_pixmap_paddle.isNull())
