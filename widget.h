@@ -7,29 +7,36 @@
 namespace
 {
 constexpr int CELL_SIZE = 32;
-constexpr int GRID_GAP = 2;
-constexpr int BORDER_WIDTH = 2;
-constexpr int FIRST_ROW_OFFSET = 16;
+constexpr int GRID_GAP = 1;
+constexpr int WOLLS_GAP = 1;
 
-constexpr int GRID_ROWS = 13;
-constexpr int GRID_COLS = 19;
+constexpr int GRID_ROWS = 20;
+constexpr int GRID_COLS = 20;
 
-constexpr int WINDOW_WIDTH = GRID_COLS * CELL_SIZE + (GRID_COLS - 1) * GRID_GAP - BORDER_WIDTH;
-constexpr int WINDOW_HEIGHT = GRID_ROWS * CELL_SIZE + (GRID_ROWS - 1) * GRID_GAP - FIRST_ROW_OFFSET - BORDER_WIDTH;
+constexpr int WINDOW_WIDTH = GRID_COLS * CELL_SIZE + GRID_COLS * WOLLS_GAP;
+constexpr int WINDOW_HEIGHT = GRID_ROWS * CELL_SIZE + GRID_ROWS * WOLLS_GAP;
 
 constexpr QSize BLOCK_SIZE(40, 25);
 constexpr QSize BALL_SIZE(12, 12);
 constexpr QSize PADDLE_SMALL(22, 8);
 constexpr QSize PADDLE_NORMAL(80, 20);
 
-static constexpr int PADDLE_Y = 400;
+static constexpr int PADDLE_Y = 600;
 static constexpr int PADDLE_MARGIN_LEFT = 20;
 static constexpr int PADDLE_MARGIN_RIGHT = 38;
+static constexpr int PADDLE_MAX_SPEED = 6;
 
 static constexpr int DELAY_MS = 1500;
 
-constexpr int BALL_SPEED = 3;  // Умеренная скорость
-constexpr int MAX_BALL_SPEED = 5;
+constexpr int BALL_SPEED = 4;  // 3 Умеренная скорость, 4 Быстрая скорость
+constexpr int MAX_BALL_SPEED = 4;
+
+static constexpr int NUM_BLOCK_ROWS = 6;
+static constexpr int NUM_BLOCK_COLS = 11;
+static constexpr int BLOCK_X_GAP = BLOCK_SIZE.width() + GRID_GAP;
+static constexpr int BLOCK_Y_GAP = BLOCK_SIZE.height() + GRID_GAP;
+static constexpr int BLOCK_ORIGIN_X = BLOCK_SIZE.width() * 2 + BLOCK_SIZE.height();
+static constexpr int BLOCK_ORIGIN_Y = 160;
 
 }
 

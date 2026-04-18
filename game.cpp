@@ -67,64 +67,76 @@ void Game::gameStart()
 void Game::createWalls()
 {
     QString walls =
-        "-------------------"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |"
-        "|                 |";
+        "--------------------"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2"
+        "1                  2";
 
     int x1 = 0;
-    int y1 = 0;
+    int y1 = BLOCK_SIZE.height();
 
-    m_num_rows = 14;
-    m_num_cols = 19;
+    m_num_rows = GRID_ROWS;
+    m_num_cols = GRID_COLS;
 
     int w_hor = m_pixmap_wall_h.width();
     int h_hor = m_pixmap_wall_h.height();
 
     int h_ver = m_pixmap_wall_v.height();
 
-    int gap = 2;
+    int gap = WOLLS_GAP;
 
     for(int row = 0; row  < m_num_rows; ++row)
     {
         x1 = 0;
         for(int col = 0; col < m_num_cols; ++col)
         {
-            if(walls.at(col+row*m_num_cols) == " ")
+            if(walls.at(col + row * m_num_cols) == " ")
             {
-                x1+=(w_hor*2);
+                x1 += w_hor;
                 continue;
             }
-            else if(walls.at(col+row*m_num_cols) == "-")
+            else if(walls.at(col + row * m_num_cols) == "-")
             {
                 m_sprite_wall_h = new Sprite(m_pixmap_wall_h, m_bounds, BA_STOP);
-                m_sprite_wall_h->setPosition(x1, y1-h_hor);
+                m_sprite_wall_h->setPosition(x1, y1);
                 m_game_engine->addSprite(m_sprite_wall_h);
             }
-            else if(walls.at(col+row*m_num_cols) == "|")
+            else if(walls.at(col+row*m_num_cols) == "1")
             {
                 m_sprite_wall_v = new Sprite(m_pixmap_wall_v, m_bounds, BA_STOP);
-                m_sprite_wall_v->setPosition(x1-w_hor, y1);
+                m_sprite_wall_v->setPosition(x1 - w_hor, y1);
+                m_game_engine->addSprite(m_sprite_wall_v);
+            }
+            else if(walls.at(col+row*m_num_cols) == "2")
+            {
+                m_sprite_wall_v = new Sprite(m_pixmap_wall_v, m_bounds, BA_STOP);
+                m_sprite_wall_v->setPosition(x1 + w_hor + 2, y1);
                 m_game_engine->addSprite(m_sprite_wall_v);
             }
 
-            x1+=w_hor+gap;
+            x1 += w_hor + gap;
         }
 
         if(row == 0)
-            y1+=h_hor+gap;
+            y1 += h_hor + gap;
         else
-            y1+=h_ver+gap;
+            y1 += h_ver + gap;
     }
 }
 
@@ -168,17 +180,19 @@ void Game::createLevel()
         return;
     }
 
-    int m_num_block_rows = 6;
-    int m_num_block_cols = 11;
-    int m_block_x_gap = 42;
-    int m_block_y_gap = 27;
-    int m_block_origin_x = 92;
-    int m_block_origin_y = 54;
+    int m_num_block_rows = NUM_BLOCK_ROWS;
+    int m_num_block_cols = NUM_BLOCK_COLS;
+    int m_block_x_gap = BLOCK_X_GAP;
+    int m_block_y_gap = BLOCK_Y_GAP;
+    int m_block_origin_x = BLOCK_ORIGIN_X;
+    int m_block_origin_y = BLOCK_ORIGIN_Y;
 
     int y1 = m_block_origin_y;
+
     for(int row = 0; row < m_num_block_rows; ++row)
     {
         int x1 = m_block_origin_x;
+
         for(int col = 0; col < m_num_block_cols; ++col)
         {
             QChar ch = level.at(col + row * m_num_block_cols);
@@ -298,7 +312,7 @@ void Game::gamePaint(QPainter* p)
             m_game_engine->drawSprites(p);
 
             for (int ii = 0; ii < m_num_lives; ++ii)
-                p->drawPixmap((m_width_wnd-(m_pixmap_paddle_sm.width()+7)*3)+((m_pixmap_paddle_sm.width()+5)*ii), 4, m_pixmap_paddle_sm);
+                p->drawPixmap((m_width_wnd-(m_pixmap_paddle_sm.width()+7)*3)+((m_pixmap_paddle_sm.width()+5)*ii), 8, m_pixmap_paddle_sm);
 
             if (m_pause)
                 p->drawPixmap(m_width_wnd/2-m_pixmap_pause.width()/2, m_height_wnd/3, m_pixmap_pause);
@@ -476,7 +490,7 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     next_level = true;
     ++m_level;
     createLevel();
-    m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, 400);
+    m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
 }
 
 void Game::checkRandomBonus(Sprite* pSpriteHitter)
@@ -501,7 +515,7 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                      pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
 
     QPoint topPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-                        QPoint(pSpriteHitter->getWidth()/2,0);
+                        QPoint(pSpriteHitter->getWidth()/2, 0);
 
     QPoint bottomPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
                            QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
@@ -512,6 +526,16 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
                           QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
 
+    // === ОТЛАДКА ===
+    // static int frameCounter = 0;
+    // frameCounter++;
+    // if (frameCounter % 60 == 0)
+    // { // не засорять лог каждый кадр
+    //     qDebug() << "--- Frame" << frameCounter << "---";
+    //     qDebug() << "Ball pos:" << pSpriteHitter->getPosition() << "vel:" << pSpriteHitter->getVelocity();
+    //     qDebug() << "Brick pos:" << rect_brick.topLeft() << "size:" << rect_brick.size();
+    // }
+
     bool collided = false;
 
     if(rect_brick.contains(leftPosBall))
@@ -521,33 +545,37 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
                                        pSpriteHitter->getVelocity().y());
             collided = true;
+            //qDebug() << "leftPosBall  -> reflected X, new vel =" << pSpriteHitter->getVelocity();
         }
     }
-    else if(rect_brick.contains(rightPosBall))
+    if(rect_brick.contains(rightPosBall))
     {
         if(pSpriteHitter->getVelocity().x() > 0)
         {
             pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
                                        pSpriteHitter->getVelocity().y());
             collided = true;
+            //qDebug() << "rightPosBall  -> reflected X, new vel =" << pSpriteHitter->getVelocity();
         }
     }
-    else if(rect_brick.contains(topPosBall))
+    if(rect_brick.contains(topPosBall))
     {
         if(pSpriteHitter->getVelocity().y() < 0)
         {
             pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
                                        -pSpriteHitter->getVelocity().y());
             collided = true;
+            //qDebug() << "topPosBall  -> reflected Y, new vel =" << pSpriteHitter->getVelocity();
         }
     }
-    else if(rect_brick.contains(bottomPosBall))
+    if(rect_brick.contains(bottomPosBall))
     {
         if(pSpriteHitter->getVelocity().y() > 0)
         {
             pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
                                        -pSpriteHitter->getVelocity().y());
             collided = true;
+            //qDebug() << "bottomPosBall  -> reflected Y, new vel =" << pSpriteHitter->getVelocity();
         }
     }
 
@@ -627,7 +655,7 @@ void Game::spriteDying(Sprite* pSprite)
         {
             m_game_engine.get()->cleanupSprites(m_bonus_red_star);
 
-            m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, 400);
+            m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, PADDLE_Y);
 
             m_count_balls = 1;
             for(int ii = 0; ii < m_count_balls; ++ii)
@@ -669,13 +697,13 @@ void Game::processKeys()
     if (m_left)
     {
         // Move left
-        ptVelocity.setX(qMax(ptVelocity.x() - 1, -4));
+        ptVelocity.setX(qMax(ptVelocity.x() - 1, -PADDLE_MAX_SPEED));
         m_sprite_paddle->setVelocity(ptVelocity);
     }
     else if (m_right)
     {
         // Move right
-        ptVelocity.setX(qMin(ptVelocity.x() + 1, 4));
+        ptVelocity.setX(qMin(ptVelocity.x() + 1, PADDLE_MAX_SPEED));
         m_sprite_paddle->setVelocity(ptVelocity);
     }
 

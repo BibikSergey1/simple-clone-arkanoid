@@ -96,14 +96,14 @@ void Widget::paintEvent(QPaintEvent *event)
         fps = frameCount;
         frameCount = 0;
         lastTime = QTime::currentTime();
-        qDebug() << "FPS:" << fps;  // Для отладки
+    //     qDebug() << "FPS:" << fps;  // Для отладки
     }
 
     QPainter p(this);
-    //    int side = qMin(width(), height());
-    //    int x = ((width() - side)/2);
-    //    int y = ((height() - side)/2);
-    //    p.setViewport(x, y, side, side);
+    int side = qMin(width(), height());
+    int x = ((width() - side)/2);
+    int y = ((height() - side)/2);
+    p.setViewport(x, y, side, side);
     p.setWindow(0, 0, m_contentWidth, m_contentHeight);
 
     if (auto* game = Game::getInstance())
@@ -113,7 +113,7 @@ void Widget::paintEvent(QPaintEvent *event)
 
     // Опционально: показываем FPS на экране
     p.setPen(Qt::green);
-    p.drawText(10, 20, QString("FPS: %1").arg(fps));
+    p.drawText(10, 16, QString("FPS: %1").arg(fps));
 }
 
 void Widget::timerEvent(QTimerEvent *event)
@@ -148,12 +148,12 @@ void Widget::timerEvent(QTimerEvent *event)
     update();
 
     // Для отладки (можно убрать в релизе)
-    static int tickCount = 0;
-    tickCount++;
-    if (tickCount % 125 == 0)
-    {  // Примерно раз в секунду
-        qDebug() << "Game cycle tick:" << tickCount;
-    }
+    // static int tickCount = 0;
+    // tickCount++;
+    // if (tickCount % 125 == 0)
+    // {  // Примерно раз в секунду
+    //     qDebug() << "Game cycle tick:" << tickCount;
+    // }
 
 }
 
@@ -172,20 +172,20 @@ void Widget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_Left:
         m_left = true;
         changed = true;
-        qDebug() << "Left pressed";
+        //qDebug() << "Left pressed";
         break;
 
     case Qt::Key_Right:
         m_right = true;
         changed = true;
-        qDebug() << "Right pressed";
+        //qDebug() << "Right pressed";
         break;
 
     case Qt::Key_P:
     case Qt::Key_Pause:  // Поддержка клавиши Pause
         m_pause = !m_pause;
         changed = true;
-        qDebug() << "Pause toggled:" << (m_pause ? "ON" : "OFF");
+        //qDebug() << "Pause toggled:" << (m_pause ? "ON" : "OFF");
         break;
 
     case Qt::Key_Escape:  // Добавим выход по Escape
@@ -221,13 +221,13 @@ void Widget::keyReleaseEvent(QKeyEvent *event)
     case Qt::Key_Left:
         m_left = false;
         changed = true;
-        qDebug() << "Left released";
+        // qDebug() << "Left released";
         break;
 
     case Qt::Key_Right:
         m_right = false;
         changed = true;
-        qDebug() << "Right released";
+        // qDebug() << "Right released";
         break;
 
     default:
