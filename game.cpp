@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QRandomGenerator>
 #include <widget.h>
+#include <cmath>
 
 std::unique_ptr<Game> Game::m_instance = nullptr;
 
@@ -382,55 +383,69 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
 void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 {
-    int gap = 10;
-    QRect rect_centr_paddle(pSpriteHittee->getPosition().x()+gap, pSpriteHittee->getPosition().y(),
-                            pSpriteHittee->getWidth()-gap*2, pSpriteHittee->getHeight());
-    m_rect_centr_paddle = rect_centr_paddle;
-
-    QRect rect_left_paddle(pSpriteHittee->getPosition().x(), pSpriteHittee->getPosition().y(),
-                           pSpriteHittee->getWidth()-(pSpriteHittee->getWidth()-gap), pSpriteHittee->getHeight());
-    m_rect_left_paddle = rect_left_paddle;
-
-    QRect rect_right_paddle(pSpriteHittee->getPosition().x()+(pSpriteHittee->getWidth()-gap), pSpriteHittee->getPosition().y(),
-                            gap, pSpriteHittee->getHeight());
-    m_rect_right_paddle = rect_right_paddle;
-
-    QPoint bottomPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-                           QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
-
-    if(pSpriteHitter->getVelocity().y() <= 0)
+    // 1. Отскок только когда мяч движется ВНИЗ (y > 0)
+    //    Если мяч летит вверх или горизонтально, столкновение не обрабатываем,
+    //    чтобы избежать многократных отскоков при застревании.
+    if (pSpriteHitter->getVelocity().y() <= 0)
         return;
 
-    if(rect_left_paddle.contains(bottomPosBall))
-    {
-        pSpriteHitter->setVelocity(-m_vel_x, -pSpriteHitter->getVelocity().y());
-    }
-    else if(rect_centr_paddle.contains(bottomPosBall))
-    {
-        pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
-                                   -pSpriteHitter->getVelocity().y());
-    }
-    else if(rect_right_paddle.contains(bottomPosBall))
-    {
-        pSpriteHitter->setVelocity(2, -pSpriteHitter->getVelocity().y());
-    }
-    else
-    {
-        return; // Мяч не попал в ракетку
-    }
+    // 2. Точка на нижней грани мяча (центр)
+    //    Берём середину нижней стороны мяча – именно она первой касается ракетки.
+    QPoint ballBottom(pSpriteHitter->getPosition().x() + pSpriteHitter->getWidth() / 2,
+                      pSpriteHitter->getPosition().y() + pSpriteHitter->getHeight());
 
-    // Ограничиваем скорость после отскока
-    QPoint vel = pSpriteHitter->getVelocity();
-    vel.setX(qBound(-MAX_BALL_SPEED, vel.x(), MAX_BALL_SPEED));
-    vel.setY(qBound(-MAX_BALL_SPEED, vel.y(), MAX_BALL_SPEED));
+    // 3. Прямоугольник ракетки
+    QRect paddleRect(pSpriteHittee->getPosition().x(),
+                     pSpriteHittee->getPosition().y(),
+                     pSpriteHittee->getWidth(),
+                     pSpriteHittee->getHeight());
 
-    // Гарантируем ненулевую горизонтальную скорость
-    if (vel.x() == 0 && vel.y() < 0)
-    {
-        vel.setX((random(0, 1) == 0) ? 2 : -2);
-    }
+    // 4. Если точка не внутри ракетки — выходим
+    if (!paddleRect.contains(ballBottom))
+        return;
 
-    pSpriteHitter->setVelocity(vel);
+    // 5. Смещение от центра ракетки (-1..1)
+    //    Вычисляем, как далеко от центра ракетки пришёлся удар.
+    //    Значение -1 означает крайний левый край, +1 – крайний правый.
+    double paddleCenterX = pSpriteHittee->getPosition().x() + pSpriteHittee->getWidth() / 2.0;
+    double offset = (ballBottom.x() - paddleCenterX) / (pSpriteHittee->getWidth() / 2.0);
+    offset = qBound(-1.0, offset, 1.0);
+
+    // 6. Максимальный угол отскока (60 градусов)
+    //    Угол изменяется от -60° (влево) до +60° (вправо) пропорционально смещению.
+    //    При ударе в центр угол = 0 → мяч летит строго вверх.
+    const double MAX_ANGLE = M_PI / 3.0;
+    double angle = offset * MAX_ANGLE;
+
+    // 7. Текущая скорость (модуль)
+    //    Вычисляем длину вектора скорости мяча до удара.
+    QPoint oldVel = pSpriteHitter->getVelocity();
+    double speed = std::hypot(oldVel.x(), oldVel.y());
+    //    Ограничиваем скорость: минимум = BALL_SPEED * 1.25 (чуть выше стартовой),
+    //    максимум = MAX_BALL_SPEED. Так мяч не будет слишком медленным или быстрым.
+    speed = qBound(static_cast<double>(BALL_SPEED) * 1.25, speed, static_cast<double>(MAX_BALL_SPEED));
+
+    // 8. Новые компоненты скорости
+    //    Пересчитываем скорость из желаемого модуля и угла.
+    //    newVelY отрицательная, потому что мяч должен лететь вверх (против оси Y).
+    double newVelX = speed * std::sin(angle);
+    double newVelY = -speed * std::cos(angle); // минус, чтобы лететь вверх
+
+    // 9. Горизонтальная скорость не должна быть слишком маленькой
+    //    Иначе мяч будет почти вертикально ходить, что скучно.
+    if (std::abs(newVelX) < 1.5)
+        newVelX = (newVelX >= 0) ? 1.5 : -1.5;
+
+    // 10. Устанавливаем скорость
+    //     Приводим к int, т.к. в Sprite скорость хранится как QPoint (целые).
+    pSpriteHitter->setVelocity(static_cast<int>(newVelX),
+                               static_cast<int>(newVelY));
+
+    // 11. Выталкиваем мяч вверх, чтобы не застревал
+    //     Без этого мяч может остаться внутри ракетки на следующий кадр
+    //     и вызвать повторный отскок или залипание.
+    pSpriteHitter->setPosition(pSpriteHitter->getPosition().x(),
+                               pSpriteHitter->getPosition().y() - 2);
 }
 
 void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)

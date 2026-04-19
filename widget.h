@@ -22,8 +22,10 @@ constexpr QSize PADDLE_SMALL(22, 8);
 constexpr QSize PADDLE_NORMAL(80, 20);
 
 static constexpr int PADDLE_Y = 600;
-static constexpr int PADDLE_MARGIN_LEFT = 20;
-static constexpr int PADDLE_MARGIN_RIGHT = 38;
+static constexpr int PADDLE_GAP_LEFT = 5;
+static constexpr int PADDLE_GAP_RIGHT = 10;
+static constexpr int PADDLE_MARGIN_LEFT = BLOCK_SIZE.height() - PADDLE_GAP_LEFT;
+static constexpr int PADDLE_MARGIN_RIGHT = BLOCK_SIZE.height() * 2 - PADDLE_GAP_RIGHT;
 static constexpr int PADDLE_MAX_SPEED = 6;
 
 static constexpr int DELAY_MS = 1500;

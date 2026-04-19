@@ -44,6 +44,17 @@ private:
     void createNewLevel(Sprite* pSpriteHitter);
     void createWalls();
     void collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
+    /**
+     * Обрабатывает столкновение мяча с ракеткой.
+     * Правила отскока:
+     * - Отскок происходит только при движении мяча вниз (y > 0).
+     * - Угол отскока зависит от места удара относительно центра ракетки:
+     *   смещение к краю увеличивает горизонтальную составляющую (до ±60°).
+     * - Модуль скорости сохраняется, но ограничивается в диапазоне
+     *   [BALL_SPEED*1.25, MAX_BALL_SPEED].
+     * - Минимальная горизонтальная скорость после отскока не менее 1.5 пикселя/кадр.
+     * - Мяч принудительно смещается вверх на 2 пикселя для предотвращения застревания.
+     */
     void collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     void collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     int random(int a, int b);
