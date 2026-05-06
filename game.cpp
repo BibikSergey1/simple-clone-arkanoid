@@ -7,11 +7,14 @@
 #include <QRandomGenerator>
 #include <widget.h>
 #include <cmath>
+#include <QPointer>
 
 std::unique_ptr<Game> Game::m_instance = nullptr;
 
 Game::Game(QObject* parent)
     : QObject(parent)
+    , m_left(false)
+    , m_right(false)
 {
 }
 
@@ -224,7 +227,7 @@ void Game::createLevel()
                 pBlock = new Sprite(m_pixmap_block_solid, m_bounds, BA_BOUNCE);
             }
 
-            if(pBlock)
+            if (pBlock)
             {
                 pBlock->setPosition(x1, y1);
                 m_game_engine->addSprite(pBlock);
@@ -450,44 +453,97 @@ void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
 void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 {
-    QRect rect_paddle(pSpriteHittee->getPosition().x(), pSpriteHittee->getPosition().y(),
-                            pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
+    //qDebug() << "[collisBonusPaddle] Enter";
 
-    QPoint leftPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(0, pSpriteHitter->getHeight()/2);
+    if (!pSpriteHitter || !pSpriteHittee) {
+        //qDebug() << "[collisBonusPaddle] Exit: null pointer(s)";
+        return;
+    }
 
-    QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
+    // qDebug() << "[collisBonusPaddle] Hitter pixmap:" << (pSpriteHitter->getPixmap().isNull() ? "null" : "valid");
+    // qDebug() << "[collisBonusPaddle] Hittee pixmap:" << (pSpriteHittee->getPixmap().isNull() ? "null" : "valid");
 
-    QPoint bottomBonus = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-            QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
+    QRect rectHitter(pSpriteHitter->getPosition().x(),
+                     pSpriteHitter->getPosition().y(),
+                     pSpriteHitter->getWidth(),
+                     pSpriteHitter->getHeight());
 
+    QRect rectHittee(pSpriteHittee->getPosition().x(),
+                     pSpriteHittee->getPosition().y(),
+                     pSpriteHittee->getWidth(),
+                     pSpriteHittee->getHeight());
 
-    if(rect_paddle.contains(bottomBonus) || rect_paddle.contains(leftPosBall)
-            || rect_paddle.contains(rightPosBall))
+    // qDebug() << "[collisBonusPaddle] Hitter rect:" << rectHitter;
+    // qDebug() << "[collisBonusPaddle] Hittee rect:" << rectHittee;
+
+    if (!rectHitter.intersects(rectHittee)) {
+        //qDebug() << "[collisBonusPaddle] Exit: no intersection";
+        return;
+    }
+
+    //qDebug() << "[collisBonusPaddle] Intersection detected, killing hitter";
+    pSpriteHitter->kill();
+
+    //qDebug() << "[collisBonusPaddle] Checking bonus type...";
+    if (pSpriteHitter->getPixmap() == m_bonus_red_star)
     {
-        pSpriteHitter->kill();
+        qDebug() << "[collisBonusPaddle] Red star bonus detected";
 
-        if (pSpriteHitter->getPixmap() == m_bonus_red_star)
+        QPoint ballPosition;
+        int currentBalls = 0;
+
+        //qDebug() << "[collisBonusPaddle] Iterating over game engine sprites...";
+        for (auto it = m_game_engine->begin(); it != m_game_engine->end(); ++it)
         {
-            m_count_balls = 2;
-            for(int ii = 0; ii < m_count_balls; ++ii)
+            Sprite* sprite = *it;
+            if (!sprite)
             {
-                Sprite* sprite_ball = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
-
-                for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
+                //qDebug() << "[collisBonusPaddle] Warning: null sprite in engine list";
+                continue;
+            }
+            if (sprite->getPixmap() == m_pixmap_ball)
+            {
+                ++currentBalls;
+                if (ballPosition.isNull())
                 {
-                    if ((*it)->getPixmap() == m_pixmap_ball)
-                    {
-                        sprite_ball->setPosition((*it)->getPosition());
-                    }
+                    ballPosition = sprite->getPosition().topLeft();
+                    //qDebug() << "[collisBonusPaddle] Found ball at position:" << ballPosition;
                 }
-
-                sprite_ball->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
-                m_game_engine->addSprite(sprite_ball);
             }
         }
+
+        //qDebug() << "[collisBonusPaddle] Current balls count:" << currentBalls;
+        int ballsToAdd = 3 - currentBalls;
+        //qDebug() << "[collisBonusPaddle] Balls to add:" << ballsToAdd;
+
+        if (ballsToAdd > 0 && !ballPosition.isNull())
+        {
+            //qDebug() << "[collisBonusPaddle] Creating" << ballsToAdd << "new balls...";
+            for (int i = 0; i < ballsToAdd; ++i)
+            {
+                Sprite* newBall = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
+                if (!newBall)
+                {
+                    //qDebug() << "[collisBonusPaddle] Error: failed to create new ball";
+                    continue;
+                }
+                newBall->setPosition(ballPosition);
+                newBall->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+                m_game_engine->addSprite(newBall);
+                //qDebug() << "[collisBonusPaddle] New ball #" << (i+1) << "added";
+            }
+        }
+        // else
+        // {
+        //     qDebug() << "[collisBonusPaddle] Not adding balls: ballsToAdd=" << ballsToAdd << "ballPosition.isNull=" << ballPosition.isNull();
+        // }
     }
+    // else
+    // {
+    //     qDebug() << "[collisBonusPaddle] Not a red star bonus, skipping ball generation";
+    // }
+
+    // qDebug() << "[collisBonusPaddle] Exit normally";
 }
 
 void Game::createNewLevel(Sprite* pSpriteHitter)
@@ -510,15 +566,19 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
 
 void Game::checkRandomBonus(Sprite* pSpriteHitter)
 {
-    int roll = random(0, 20);
-    if(roll >= 19 && roll <= 20)
-    {
-        // bonus balls
-        Sprite* sprt_red_star = new Sprite(m_bonus_red_star, m_bounds, BA_DIE, this);
-        sprt_red_star->setPosition(pSpriteHitter->getPosition());
-        sprt_red_star->setVelocity(0, 1);
-        m_game_engine->addSprite(sprt_red_star);
-    }
+    if (!pSpriteHitter)
+        return;
+
+    constexpr int BONUS_CHANCE_PERCENT = 10; // 10%
+    if (random(0, 99) >= BONUS_CHANCE_PERCENT)
+        return;
+
+    // Пока только бонус "красная звезда" (multi-ball)
+    const int FALL_SPEED = 1;
+    Sprite* bonus = new Sprite(m_bonus_red_star, m_bounds, BA_DIE, this);
+    bonus->setPosition(pSpriteHitter->getPosition().topLeft());
+    bonus->setVelocity(0, FALL_SPEED);
+    m_game_engine->addSprite(bonus);
 }
 
 void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
@@ -650,52 +710,61 @@ void Game::addEnemy()
 
 void Game::spriteDying(Sprite* pSprite)
 {
-    if (pSprite->getPixmap() == m_pixmap_ball)
-    {
-        m_count_balls = m_game_engine.get()->countSprites(m_pixmap_ball);
+    // Определяем, что именно умирает
+    bool isBall = (pSprite->getPixmap() == m_pixmap_ball);
+    if (!isBall)
+        return; // другие типы спрайтов (бонусы, враги) обрабатываем отдельно, если нужно
 
-        if (next_level == false && m_count_balls == 1)
+    // Уменьшаем счётчик мячей (не вызывая countSprites)
+    // Но лучше вести учёт при добавлении/удалении мячей.
+    // Пока используем countSprites для простоты, но запоминаем результат.
+    int ballsLeft = m_game_engine->countSprites(m_pixmap_ball) - 1; // текущий мяч ещё не удалён из контейнера
+
+    if (ballsLeft == 0)  // был последний мяч
+    {
+        // Потеря жизни
+        if (!next_level)  // только если не переходим на следующий уровень
         {
             --m_num_lives;
         }
-
-//        next_level = false;
+        // Не сбрасываем next_level здесь (его сброс происходит при начале уровня)
 
         if (m_num_lives == 0)
         {
             m_game_over = true;
+            return;  // не продолжаем — игра окончена
         }
 
-        if(m_count_balls == 1)
+        // Очистить бонусы (звёзды)
+        m_game_engine->cleanupSprites(m_bonus_red_star);
+
+        // Переместить ракетку в центр
+        m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
+
+        // Создать новый мяч
+        Sprite* newBall = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
+        newBall->setPosition(m_width_wnd/2 - newBall->getWidth()/2,
+                             m_sprite_paddle->getPosition().y() - newBall->getHeight());
+        m_game_engine->addSprite(newBall);
+        m_sprite_ball[0] = newBall;  // сохраняем указатель
+
+        QPointer<Game> self(this);
+        float velX = m_vel_x;
+        float velY = m_vel_y;
+
+        QTimer::singleShot(1500, this, [self, velX, velY]()
         {
-            m_game_engine.get()->cleanupSprites(m_bonus_red_star);
-
-            m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, PADDLE_Y);
-
-            m_count_balls = 1;
-            for(int ii = 0; ii < m_count_balls; ++ii)
+            if (self.isNull())
+                return;
+            for (auto it = self->m_game_engine->begin(); it != self->m_game_engine->end(); ++it)
             {
-                m_sprite_ball[ii] = new Sprite(m_pixmap_ball, m_bounds, BA_DIE, this);
-                m_sprite_ball[ii]->setPosition(m_width_wnd/2-m_sprite_ball[ii]->getWidth()/2,
-                                           m_sprite_paddle->getPosition().y()-m_sprite_ball[ii]->getHeight());
-                m_game_engine->addSprite(m_sprite_ball[ii]);
-            }
-
-            auto lbd = [&]()
-            {
-                m_vel_x = BALL_SPEED;
-                m_vel_y = BALL_SPEED;
-
-                for(auto it = m_game_engine.get()->begin(); it != m_game_engine.get()->end(); ++it)
+                if ((*it)->getPixmap() == self->m_pixmap_ball)
                 {
-                    next_level = false;
-                    if ((*it)->getPixmap() == m_pixmap_ball)
-                        (*it)->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+                   (*it)->setVelocity(self->random(-velX, velX), -velY);
                 }
-            };
-
-            QTimer::singleShot(1500, this, lbd);
-        }
+            }
+            self->next_level = false;
+        });
     }
 }
 

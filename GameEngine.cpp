@@ -15,65 +15,43 @@ GameEngine::~GameEngine()
 
 bool GameEngine::checkSpriteCollision(Sprite* pTestSprite)
 {
-    // See if the sprite has collided with any other sprites
-    QList<Sprite*>::iterator siSprite;
-    for (siSprite = sprites_.begin(); siSprite != sprites_.end(); ++siSprite)
+    if (!pTestSprite)
+        return false;
+
+    // Копируем список указателей, чтобы итерация не ломалась при удалениях
+    QList<Sprite*> spritesCopy = sprites_;
+    for (Sprite* pOther : spritesCopy)
     {
-        // Make sure not to check for collision with itself
-        if (pTestSprite == (*siSprite))
+        if (pTestSprite == pOther)
             continue;
 
-        // Test the collision
-        if (pTestSprite->testCollision(*siSprite))
+        if (pTestSprite->testCollision(pOther))
         {
-            // Collision detected
-            return Game::getInstance()->spriteCollision((*siSprite), pTestSprite);
+            return Game::getInstance()->spriteCollision(pOther, pTestSprite);
         }
     }
-
-    // No collision
     return false;
 }
 
 void GameEngine::addSprite(Sprite* pSprite)
 {
-    // Add a sprite to the sprite vector
-    if (pSprite != nullptr)
-    {
-        // See if there are sprites already in the sprite vector
-        if (sprites_.size() > 0)
-        {
-            // Find a spot in the sprite vector to insert the sprite by its z-order
-            QList<Sprite*>::iterator siSprite;
-            for (siSprite = sprites_.begin(); siSprite != sprites_.end(); ++siSprite)
-            {
-                if (pSprite->getZOrder() < (*siSprite)->getZOrder())
-                {
-                    // Insert the sprite into the sprite vector
-                    sprites_.insert(siSprite, pSprite);
-                    return;
-                }
-            }
-        }
+    if (!pSprite)
+        return;
 
-    // The sprite's z-order is highest, so add it to the end of the vector
-    sprites_.push_back(pSprite);
+    // Find insertion position based on z-order (ascending)
+    auto it = sprites_.begin();
+    while (it != sprites_.end() && (*it)->getZOrder() <= pSprite->getZOrder())
+    {
+        ++it;
     }
+    sprites_.insert(it, pSprite);
 }
 
 void GameEngine::cleanupSprites()
 {
     // Delete and remove the sprites in the sprite vector
-
     qDeleteAll(sprites_);
     sprites_.clear();
-
-//    QList<Sprite*>::iterator siSprite;
-//    for (siSprite = sprites_.begin(); siSprite != sprites_.end(); ++siSprite)
-//    {
-//        delete (*siSprite);
-//        sprites_.erase(siSprite);
-//    }
 }
 
 void GameEngine::cleanupSprites(const QPixmap& pix)
@@ -106,44 +84,44 @@ void GameEngine::drawSprites(QPainter* p)
 
 void GameEngine::updateSprites()
 {
-    // Update the sprites in the sprite vector
-    QRect rcOldSpritePos;
-    SPRITEACTION  saSpriteAction;
-
-    for (int i=0;i<sprites_.count();++i)
+    for (int i = 0; i < sprites_.size(); )
     {
-        if(sprites_.at(i))
+        Sprite* sprite = sprites_.at(i);
+        if (!sprite)
         {
-            // Save the old sprite position in case we need to restore it
-            rcOldSpritePos = sprites_.at(i)->getPosition();
-
-            // Update the sprite
-            saSpriteAction = sprites_.at(i)->update();
-
-            // Handle the SA_ADDSPRITE sprite action
-            if (saSpriteAction == SA_ADDSPRITE)
-            {
-                // Allow the sprite to add its sprite
-                addSprite(sprites_.at(i)->addSprite());
-            }
-
-            // Handle the SA_KILL sprite action
-            if (saSpriteAction == SA_KILL)
-            {
-                // Notify the game that the sprite is dying
-                Game::getInstance()->spriteDying(sprites_.at(i));
-
-                delete sprites_.takeAt(i);
-
-                continue;
-            }
-
-            // See if the sprite collided with any others
-            if (checkSpriteCollision(sprites_.at(i)))
-            {
-                // Restore the old sprite position
-                sprites_.at(i)->setPosition(rcOldSpritePos);
-            }
+            ++i;
+            continue;
         }
+
+        // 1. Сохраняем старую позицию
+        QRect oldPos = sprite->getPosition();
+
+        // 2. Обновляем спрайт
+        SPRITEACTION action = sprite->update();
+
+        // 3. Добавление нового спрайта (сразу)
+        if (action == SA_ADDSPRITE)
+        {
+            Sprite* newSprite = sprite->addSprite();
+            if (newSprite)
+                addSprite(newSprite);   // добавит в конец sprites_
+        }
+
+        // 4. Удаление текущего спрайта (если нужно)
+        if (action == SA_KILL)
+        {
+            Game::getInstance()->spriteDying(sprite);
+            delete sprites_.takeAt(i);  // удаляем и забираем из списка
+            // i не увеличиваем — на место i встал следующий элемент
+            continue;
+        }
+
+        // 5. Коллизия (только если спрайт жив)
+        if (checkSpriteCollision(sprite))
+        {
+            sprite->setPosition(oldPos);
+        }
+
+        ++i;  // переходим к следующему спрайту
     }
 }
