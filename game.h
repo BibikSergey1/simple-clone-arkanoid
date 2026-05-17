@@ -28,6 +28,7 @@ public:
 private:
     void addEnemy();
     void newGame();
+    void updateSaucer();
 
 private slots:
 
@@ -57,13 +58,14 @@ private:
      */
     void collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     void collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
+    void collisBallSaucer(Sprite* pBall, Sprite* pSaucer);
     int random(int a, int b);
     void processKeys();
     void checkRandomBonus(Sprite* pSpriteHitter);
     void initRandomGenerator();
     bool loadTextures();
     void scaleTextures();
-    void setupBallMask();
+    void setupMask();
 
     QRect m_bounds;
     std::unique_ptr<GameEngine> m_game_engine;
@@ -82,15 +84,18 @@ private:
     QPixmap m_pixmap_block_2hit;   // блок с двумя жизнями (неповреждённый)
     QPixmap m_pixmap_block_damaged; // блок после первого удара
     QPixmap m_pixmap_block_solid;// не разрушаемый блок
+    QPixmap m_pixmap_saucer;
 
     std::unique_ptr<StarryBackground> m_background;
 
-    Sprite* m_sprite_wall_h;
-    Sprite* m_sprite_wall_v;
-    Sprite* m_sprite_block;
     enum {BALLS=2};
+
+    Sprite* m_sprite_wall_h = nullptr;
+    Sprite* m_sprite_wall_v = nullptr;
+    Sprite* m_sprite_block = nullptr;
     Sprite* m_sprite_ball[BALLS];
-    Sprite* m_sprite_paddle;
+    Sprite* m_sprite_paddle = nullptr;
+    Sprite* m_sprite_saucer = nullptr;
 
     int m_width_wnd;
     int m_height_wnd;

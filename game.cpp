@@ -61,7 +61,7 @@ void Game::gameStart()
         return;
     }
 
-    setupBallMask();
+    setupMask();
 
     newGame();
 
@@ -246,7 +246,7 @@ void Game::newGame()
     m_bounds = QRect(0, 0, m_width_wnd, m_height_wnd);
 
     // paddle
-    QRect bounds_paddle = QRect(PADDLE_MARGIN_LEFT, 0, m_width_wnd-PADDLE_MARGIN_RIGHT, m_height_wnd);
+    QRect bounds_paddle = QRect(PADDLE_MARGIN_LEFT, BLOCK_SIZE.height() * 2, m_width_wnd-PADDLE_MARGIN_RIGHT, m_height_wnd);
     m_sprite_paddle = new Sprite(m_pixmap_paddle, bounds_paddle, BA_STOP, this);
     m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, PADDLE_Y);
     m_game_engine->addSprite(m_sprite_paddle);
@@ -287,6 +287,11 @@ void Game::newGame()
 
     // Background
     m_background = std::make_unique<StarryBackground>(m_width_wnd, m_height_wnd);
+
+    m_sprite_saucer = new Sprite(m_pixmap_saucer, bounds_paddle, BA_BOUNCE);
+    m_sprite_saucer->setPosition(m_width_wnd / 2, BLOCK_SIZE.height() * 2);
+    m_sprite_saucer->setVelocity(3, 1);
+    m_game_engine->addSprite(m_sprite_saucer);
 
     m_pause = false;
     m_num_lives = 3;
@@ -344,6 +349,8 @@ void Game::gameCycle()
             {
                 processKeys();
                 m_game_engine->updateSprites();
+
+                updateSaucer();
             }
         }
     }
@@ -378,6 +385,13 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     {
         collisBonusPaddle(pSpriteHitter, pSpriteHittee);
 
+        return true;
+    }
+
+    // Столкновение мяча с саузером
+    if ((pHitter == m_pixmap_ball && pHittee == m_pixmap_saucer))
+    {
+        collisBallSaucer(pSpriteHitter, pSpriteHittee);
         return true;
     }
 
@@ -546,6 +560,46 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     // qDebug() << "[collisBonusPaddle] Exit normally";
 }
 
+void Game::collisBallSaucer(Sprite* pBall, Sprite* pSaucer)
+{
+    QRect ballRect = pBall->getPosition();
+    QRect saucerRect = pSaucer->getPosition();
+    QPoint ballVel = pBall->getVelocity();
+
+    // 1. Рассчитаем перекрытие по осям
+    int overlapLeft   = ballRect.right() - saucerRect.left();
+    int overlapRight  = saucerRect.right() - ballRect.left();
+    int overlapTop    = ballRect.bottom() - saucerRect.top();
+    int overlapBottom = saucerRect.bottom() - ballRect.top();
+
+    // 2. Выбираем ось с минимальным перекрытием
+    int minOverlap = std::min({overlapLeft, overlapRight, overlapTop, overlapBottom});
+    if (minOverlap == overlapLeft || minOverlap == overlapRight)
+        ballVel.setX(-ballVel.x());
+    else
+        ballVel.setY(-ballVel.y());
+
+    // 3. Минимальная скорость, чтобы избежать "залипания"
+    if (abs(ballVel.x()) < 2) ballVel.setX(ballVel.x() > 0 ? 2 : -2);
+    if (abs(ballVel.y()) < 2) ballVel.setY(ballVel.y() > 0 ? 2 : -2);
+
+    pBall->setVelocity(ballVel);
+
+    // 4. Разводим объекты, чтобы они больше не пересекались
+    // Выбираем направление разведения по той же оси, что и отскок
+    QPoint separation(0,0);
+    if (minOverlap == overlapLeft)
+        separation.setX(-(overlapLeft + 1));
+    else if (minOverlap == overlapRight)
+        separation.setX(overlapRight + 1);
+    else if (minOverlap == overlapTop)
+        separation.setY(-(overlapTop + 1));
+    else if (minOverlap == overlapBottom)
+        separation.setY(overlapBottom + 1);
+
+    pBall->setPosition(ballRect.translated(separation));
+}
+
 void Game::createNewLevel(Sprite* pSpriteHitter)
 {
     pSpriteHitter->kill();
@@ -557,6 +611,13 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_block_2hit);
     m_game_engine->cleanupSprites(m_pixmap_block_damaged);
     m_game_engine->cleanupSprites(m_pixmap_block_solid);
+
+    // Сброс тарелки для нового уровня
+    if (m_sprite_saucer)
+    {
+        m_sprite_saucer->setPosition(m_width_wnd / 2, BLOCK_SIZE.height() * 2);
+        m_sprite_saucer->setVelocity(3, 1);
+    }
 
     next_level = true;
     ++m_level;
@@ -838,6 +899,7 @@ bool Game::loadTextures()
     m_pixmap_block_2hit = loadPixmap(":/images/block_2hit.png");
     m_pixmap_block_damaged = loadPixmap(":/images/block_damaged.png");
     m_pixmap_block_solid = loadPixmap(":/images/block_solid.png");
+    m_pixmap_saucer = loadPixmap(":/images/saucer.bmp");
 
     // Масштабирование с правильными параметрами
     scaleTextures();
@@ -872,14 +934,147 @@ void Game::scaleTextures()
     }
 }
 
-void Game::setupBallMask()
+void Game::setupMask()
 {
     if (!m_pixmap_ball.isNull())
     {
-        // Создаем маску на основе черного цвета (0,0,0)
         QColor black(0, 0, 0);
         QBitmap mask = m_pixmap_ball.createMaskFromColor(black);
         m_pixmap_ball.setMask(mask);
-        qDebug() << "Ball mask created";
     }
+
+    if (!m_pixmap_saucer.isNull())
+    {
+        QColor madjenta(255, 0, 255);
+        QBitmap mask = m_pixmap_saucer.createMaskFromColor(madjenta);
+        m_pixmap_saucer.setMask(mask);
+    }
+}
+
+void Game::updateSaucer()
+{
+    if (!m_sprite_saucer)
+        return;
+
+    auto isBlock = [&](Sprite* s) -> bool
+    {
+        if (!s)
+            return false;
+
+        QPixmap pix = s->getPixmap();
+        return (pix == m_pixmap_block ||
+                pix == m_pixmap_block_blue ||
+                pix == m_pixmap_block_2hit ||
+                pix == m_pixmap_block_damaged ||
+                pix == m_pixmap_block_solid);
+    };
+
+    QRect saucerRect = m_sprite_saucer->getPosition();
+    QPoint velocity = m_sprite_saucer->getVelocity();
+
+    // ========== 1. Выбор случайной цели (каждую секунду) ==========
+    static QPoint targetPoint(0, 0);
+    static int targetTicks = 0;
+    targetTicks++;
+    // Меняем цель каждые 60 кадров (≈1 секунда) или если уже почти достигли
+    bool reached = (abs(targetPoint.x() - saucerRect.center().x()) < 10 &&
+                    abs(targetPoint.y() - saucerRect.center().y()) < 10);
+    if (targetTicks > 60 || reached)
+    {
+        targetTicks = 0;
+        // Случайная точка внутри игровых границ
+        targetPoint.setX(m_bounds.left() + 20 + rand() % (m_bounds.width() - 40));
+        targetPoint.setY(m_bounds.top()  + 20 + rand() % (m_bounds.height() - 40));
+    }
+
+    // Вычисляем желаемое направление к цели
+    int dxToTarget = targetPoint.x() - saucerRect.center().x();
+    int dyToTarget = targetPoint.y() - saucerRect.center().y();
+    int desiredX = (dxToTarget > 0) ? 1 : (dxToTarget < 0) ? -1 : 0;
+    int desiredY = (dyToTarget > 0) ? 1 : (dyToTarget < 0) ? -1 : 0;
+
+    // Плавно меняем скорость в сторону цели (максимум ±1 за кадр)
+    if (velocity.x() < desiredX) velocity.setX(velocity.x() + 1);
+    if (velocity.x() > desiredX) velocity.setX(velocity.x() - 1);
+    if (velocity.y() < desiredY) velocity.setY(velocity.y() + 1);
+    if (velocity.y() > desiredY) velocity.setY(velocity.y() - 1);
+
+    // ========== 2. Поиск ближайшего блока (как раньше) ==========
+    int centerX = saucerRect.center().x();
+    int centerY = saucerRect.center().y();
+    int closestDx = 0, closestDy = 0;
+    int minDistance = 10000;
+
+    for (auto it = m_game_engine->begin(); it != m_game_engine->end(); ++it)
+    {
+        Sprite* sprite = *it;
+        if (!sprite || sprite == m_sprite_saucer)
+            continue;
+        if (!isBlock(sprite))
+            continue;
+
+        QRect blockRect = sprite->getPosition();
+        int blockCenterX = blockRect.center().x();
+        int blockCenterY = blockRect.center().y();
+        int dx = centerX - blockCenterX;
+        int dy = centerY - blockCenterY;
+        int dist = abs(dx) + abs(dy);
+
+        if (dist < minDistance)
+        {
+            minDistance = dist;
+            closestDx = dx;
+            closestDy = dy;
+        }
+    }
+
+    // ========== 3. Уклонение от близкого блока (плавное) ==========
+    const int THRESHOLD = 70;
+    if (minDistance < THRESHOLD)
+    {
+        if (abs(closestDx) < THRESHOLD)
+        {
+            if (closestDx < 0)
+                velocity.setX(qMax(velocity.x() - 1, -6));
+            else
+                velocity.setX(qMin(velocity.x() + 1, 6));
+        }
+        if (abs(closestDy) < THRESHOLD)
+        {
+            if (closestDy < 0)
+                velocity.setY(qMax(velocity.y() - 1, -6));
+            else
+                velocity.setY(qMin(velocity.y() + 1, 6));
+        }
+    }
+
+    // ========== 4. Отталкивание от границ экрана ==========
+    if (saucerRect.left() < m_bounds.left() && velocity.x() < 0)
+        velocity.setX(1);
+    if (saucerRect.right() > m_bounds.right() && velocity.x() > 0)
+        velocity.setX(-1);
+    if (saucerRect.top() < m_bounds.top() && velocity.y() < 0)
+        velocity.setY(1);
+    if (saucerRect.bottom() > m_bounds.bottom() && velocity.y() > 0)
+        velocity.setY(-1);
+
+    // ========== 5. Гарантия минимальной скорости (чтобы не стоял) ==========
+    if (abs(velocity.x()) < 1 && abs(velocity.y()) < 1)
+    {
+        // Задаём случайное маленькое движение
+        velocity.setX((rand() % 3) - 1);  // -1,0,1
+        velocity.setY((rand() % 3) - 1);
+        // Если оба нуля – принудительно даём импульс
+        if (velocity.x() == 0 && velocity.y() == 0)
+        {
+            velocity.setX(1);
+            velocity.setY(0);
+        }
+    }
+
+    // Ограничиваем максимальную скорость
+    velocity.setX(qBound(-6, velocity.x(), 6));
+    velocity.setY(qBound(-6, velocity.y(), 6));
+
+    m_sprite_saucer->setVelocity(velocity);
 }
