@@ -28,6 +28,11 @@ static constexpr int PADDLE_MARGIN_LEFT = BLOCK_SIZE.height() - PADDLE_GAP_LEFT;
 static constexpr int PADDLE_MARGIN_RIGHT = BLOCK_SIZE.height() * 2 - PADDLE_GAP_RIGHT;
 static constexpr int PADDLE_MAX_SPEED = 6;
 
+static constexpr int BALL_GAP_LEFT = 15;
+static constexpr int BALL_GAP_RIGHT = 15;
+static constexpr int BALL_MARGIN_LEFT = BALL_GAP_LEFT;
+static constexpr int BALL_MARGIN_RIGHT = BALL_GAP_RIGHT * 2;
+
 static constexpr int DELAY_MS = 1500;
 
 constexpr int BALL_SPEED = 4;  // 3 Умеренная скорость, 4 Быстрая скорость
@@ -39,6 +44,8 @@ static constexpr int BLOCK_X_GAP = BLOCK_SIZE.width() + GRID_GAP;
 static constexpr int BLOCK_Y_GAP = BLOCK_SIZE.height() + GRID_GAP;
 static constexpr int BLOCK_ORIGIN_X = BLOCK_SIZE.width() * 2 + BLOCK_SIZE.height();
 static constexpr int BLOCK_ORIGIN_Y = 160;
+
+static constexpr int UP_MARGIN = 8;
 
 }
 

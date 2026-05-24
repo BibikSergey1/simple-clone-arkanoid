@@ -44,6 +44,7 @@ private:
     void createLevel();
     void createNewLevel(Sprite* pSpriteHitter);
     void createWalls();
+    void createBall();
     void collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     /**
      * Обрабатывает столкновение мяча с ракеткой.
@@ -68,6 +69,8 @@ private:
     void setupMask();
 
     QRect m_bounds;
+    QRect m_game_bounds;
+    QRect m_paddle_bounds;
     std::unique_ptr<GameEngine> m_game_engine;
 
     QPixmap m_pixmap_block;
@@ -88,7 +91,7 @@ private:
 
     std::unique_ptr<StarryBackground> m_background;
 
-    enum {BALLS=2};
+    enum {BALLS=3};
 
     Sprite* m_sprite_wall_h = nullptr;
     Sprite* m_sprite_wall_v = nullptr;
@@ -124,7 +127,6 @@ private:
     // balls
     int m_vel_x;
     int m_vel_y;
-    int m_count_balls;
 
     bool m_pause;
 };
