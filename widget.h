@@ -8,7 +8,7 @@ namespace
 {
 constexpr int CELL_SIZE = 32;
 constexpr int GRID_GAP = 1;
-constexpr int WOLLS_GAP = 1;
+constexpr int WOLLS_GAP = 2;
 
 constexpr int GRID_ROWS = 20;
 constexpr int GRID_COLS = 20;

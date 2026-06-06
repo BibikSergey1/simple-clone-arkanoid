@@ -31,6 +31,7 @@ private:
     void updateSaucer();
 
 private slots:
+    void resetPaddleWidth();
 
 private:
     explicit Game(QObject* parent = nullptr);
@@ -43,7 +44,6 @@ private:
 
     void createLevel();
     void createNewLevel(Sprite* pSpriteHitter);
-    void createWalls();
     void createBall();
     void collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     /**
@@ -67,10 +67,12 @@ private:
     bool loadTextures();
     void scaleTextures();
     void setupMask();
+    void drawWalls(QPainter* p);
 
     QRect m_bounds;
     QRect m_game_bounds;
     QRect m_paddle_bounds;
+
     std::unique_ptr<GameEngine> m_game_engine;
 
     QPixmap m_pixmap_block;
@@ -83,15 +85,25 @@ private:
     QPixmap m_pixmap_game_over;
     QPixmap m_pixmap_win;
     QPixmap m_pixmap_pause;
-    QPixmap m_bonus_red_star;
+    QPixmap m_pixmap_bonus_red_star;
+    QPixmap m_pixmap_bonus_green_star;
     QPixmap m_pixmap_block_2hit;   // блок с двумя жизнями (неповреждённый)
     QPixmap m_pixmap_block_damaged; // блок после первого удара
     QPixmap m_pixmap_block_solid;// не разрушаемый блок
     QPixmap m_pixmap_saucer;
 
+    enum BonusType
+    {
+        BONUS_RED_STAR,
+        BONUS_GREEN_STAR,
+        // ... сюда можно добавлять новые
+        BONUS_COUNT
+    };
+    QPixmap* m_bonusPixmaps[BONUS_COUNT];
+
     std::unique_ptr<StarryBackground> m_background;
 
-    enum {BALLS=3};
+    enum {BALLS = 3};
 
     Sprite* m_sprite_wall_h = nullptr;
     Sprite* m_sprite_wall_v = nullptr;
@@ -129,6 +141,14 @@ private:
     int m_vel_y;
 
     bool m_pause;
+
+    bool m_paddleBonusActive;
+    QTimer* m_paddleBonusTimer;
+
+    int m_originalPaddleWidth;
+    int m_originalPaddleHeight;
+
+    QString walls;
 };
 
 #endif // GAME_H

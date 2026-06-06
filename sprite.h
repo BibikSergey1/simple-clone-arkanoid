@@ -50,6 +50,8 @@ public:
     bool isHidden() { return hidden_; }
     void setHidden(bool hidden) { hidden_ = hidden; }
 
+    void setWidth(int width);
+
 protected:
     QPixmap pixmap_;
 

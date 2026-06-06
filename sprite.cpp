@@ -248,3 +248,13 @@ Sprite* Sprite::addSprite()
 {
     return nullptr;
 }
+
+void Sprite::setWidth(int width)
+{
+    if (width == getWidth()) return;
+    QPixmap scaled = pixmap_.scaled(width, getHeight(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    setPixmap(scaled);
+    QRect pos = rect_position_;
+    pos.setWidth(width);
+    setPosition(pos); // здесь уже вызовется calcCollisionRect
+}

@@ -18,6 +18,32 @@ Game::Game(QObject* parent)
 {
 }
 
+void Game::resetPaddleWidth()
+{
+    if (!m_paddleBonusActive)
+        return;
+
+    int oldCenter = m_sprite_paddle->getPosition().x() + m_sprite_paddle->getWidth() / 2;
+    int newLeft = oldCenter - m_originalPaddleWidth / 2;
+
+    int leftBound = m_paddle_bounds.left();
+    int rightBound = m_paddle_bounds.right();
+    if (newLeft < leftBound)
+        newLeft = leftBound;
+    else if (newLeft + m_originalPaddleWidth > rightBound)
+        newLeft = rightBound - m_originalPaddleWidth;
+
+    m_sprite_paddle->kill();
+
+    // Создаём стандартную
+    m_sprite_paddle = new Sprite(m_pixmap_paddle, m_paddle_bounds, BA_STOP, this);
+    m_sprite_paddle->setPosition(newLeft, PADDLE_Y);
+    m_game_engine->addSprite(m_sprite_paddle);
+
+    m_paddleBonusActive = false;
+    m_paddleBonusTimer->stop();
+}
+
 Game* Game::getInstance()
 {
     if(!m_instance)
@@ -41,6 +67,14 @@ bool Game::gameInitialize(int w, int h)
     m_width_wnd = w;
     m_height_wnd = h;
 
+    for (int i = 0; i < BALLS; ++i)
+        m_sprite_ball[i] = nullptr;
+
+    m_paddleBonusActive = false;
+    m_paddleBonusTimer = new QTimer(this);
+    m_paddleBonusTimer->setSingleShot(true);
+    connect(m_paddleBonusTimer, &QTimer::timeout, this, &Game::resetPaddleWidth);
+
     qDebug() << "Game initialized";
     return true;
 }
@@ -63,85 +97,12 @@ void Game::gameStart()
 
     setupMask();
 
+    m_bonusPixmaps[BONUS_RED_STAR] = &m_pixmap_bonus_red_star;
+    m_bonusPixmaps[BONUS_GREEN_STAR] = &m_pixmap_bonus_green_star;
+
     newGame();
 
     qDebug() << "Game started with all resources loaded";
-}
-
-void Game::createWalls()
-{
-    QString walls =
-        "--------------------"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2"
-        "1                  2";
-
-    int x1 = 0;
-    int y1 = BLOCK_SIZE.height();
-
-    m_num_rows = GRID_ROWS;
-    m_num_cols = GRID_COLS;
-
-    int w_hor = m_pixmap_wall_h.width();
-    int h_hor = m_pixmap_wall_h.height();
-
-    int h_ver = m_pixmap_wall_v.height();
-
-    int gap = WOLLS_GAP;
-
-    for(int row = 0; row  < m_num_rows; ++row)
-    {
-        x1 = 0;
-        for(int col = 0; col < m_num_cols; ++col)
-        {
-            if(walls.at(col + row * m_num_cols) == " ")
-            {
-                x1 += w_hor;
-                continue;
-            }
-            else if(walls.at(col + row * m_num_cols) == "-")
-            {
-                m_sprite_wall_h = new Sprite(m_pixmap_wall_h, m_bounds, BA_STOP);
-                m_sprite_wall_h->setPosition(x1, y1);
-                m_game_engine->addSprite(m_sprite_wall_h);
-            }
-            else if(walls.at(col+row*m_num_cols) == "1")
-            {
-                m_sprite_wall_v = new Sprite(m_pixmap_wall_v, m_bounds, BA_STOP);
-                m_sprite_wall_v->setPosition(x1 - w_hor, y1);
-                m_game_engine->addSprite(m_sprite_wall_v);
-            }
-            else if(walls.at(col+row*m_num_cols) == "2")
-            {
-                m_sprite_wall_v = new Sprite(m_pixmap_wall_v, m_bounds, BA_STOP);
-                m_sprite_wall_v->setPosition(x1 + w_hor + 2, y1);
-                m_game_engine->addSprite(m_sprite_wall_v);
-            }
-
-            x1 += w_hor + gap;
-        }
-
-        if(row == 0)
-            y1 += h_hor + gap;
-        else
-            y1 += h_ver + gap;
-    }
 }
 
 void Game::createLevel()
@@ -244,7 +205,9 @@ void Game::createBall()
     newBall->setPosition(m_width_wnd/2 - newBall->getWidth()/2,
                          m_sprite_paddle->getPosition().y() - newBall->getHeight());
     m_game_engine->addSprite(newBall);
-    m_sprite_ball[0] = newBall;  // сохраняем указатель
+    m_sprite_ball[0] = newBall;
+    for (int i = 1; i < BALLS; ++i)
+        m_sprite_ball[i] = nullptr;
 }
 
 void Game::newGame()
@@ -257,7 +220,7 @@ void Game::newGame()
     m_game_bounds = QRect(BALL_MARGIN_LEFT,
                           BLOCK_SIZE.height() * 2 - UP_MARGIN,
                           m_width_wnd-BALL_MARGIN_RIGHT,
-                          m_height_wnd);
+                          m_height_wnd - 1);
     // paddle
     m_paddle_bounds = QRect(PADDLE_MARGIN_LEFT,
                             BLOCK_SIZE.height() * 2 - UP_MARGIN,
@@ -267,9 +230,8 @@ void Game::newGame()
     m_sprite_paddle = new Sprite(m_pixmap_paddle, m_paddle_bounds, BA_STOP, this);
     m_sprite_paddle->setPosition(m_width_wnd/2-m_sprite_paddle->getWidth()/2, PADDLE_Y);
     m_game_engine->addSprite(m_sprite_paddle);
-
-    // walls
-    createWalls();
+    m_originalPaddleWidth = m_sprite_paddle->getWidth();
+    m_originalPaddleHeight = m_sprite_paddle->getHeight();
 
     // blocks
     m_level = 1;
@@ -308,6 +270,11 @@ void Game::newGame()
     m_game_over = false;
     m_game_win = false;
     next_level = false;
+
+    if (m_paddleBonusActive)
+        resetPaddleWidth();
+
+    m_paddleBonusActive = false;
 }
 
 void Game::gameActivate()
@@ -318,6 +285,42 @@ void Game::gameActivate()
 void Game::gameDeactivate()
 {
     m_pause = true;
+}
+
+void Game::drawWalls(QPainter* p)
+{
+    // Настраиваемый отступ сверху
+    const int topOffset = 25;
+
+    // Параметры блоков стены
+    int blockH = m_pixmap_wall_h.height();   // высота горизонтальной стены (блок)
+    int blockW_h = m_pixmap_wall_h.width();  // ширина одного блока горизонтальной стены
+    int blockV = m_pixmap_wall_v.width();    // ширина вертикальной стены (блок)
+    int blockH_v = m_pixmap_wall_v.height(); // высота одного блока вертикальной стены
+
+    int gap = 2; // зазор между блоками
+
+    // Горизонтальная стена – рисуем только блоки, целиком влезающие по ширине
+    int topY = topOffset;
+    for (int x = 1; x + blockW_h <= m_width_wnd; x += blockW_h + gap)
+    {
+        p->drawPixmap(x, topY, blockW_h, blockH, m_pixmap_wall_h);
+    }
+
+    // Левая вертикальная стена – проверяем, что блок влезает по высоте
+    int leftX = 0;
+    int startY = topY + blockH + gap;   // ниже верхней стены + зазор
+    for (int y = startY; y + blockH_v <= m_height_wnd; y += blockH_v + gap)
+    {
+        p->drawPixmap(leftX, y, blockV, blockH_v, m_pixmap_wall_v);
+    }
+
+    // Правая вертикальная стена – аналогично
+    int rightX = m_width_wnd - blockV;
+    for (int y = startY; y + blockH_v <= m_height_wnd; y += blockH_v + gap)
+    {
+        p->drawPixmap(rightX, y, blockV, blockH_v, m_pixmap_wall_v);
+    }
 }
 
 void Game::gamePaint(QPainter* p)
@@ -332,6 +335,8 @@ void Game::gamePaint(QPainter* p)
 
             for (int ii = 0; ii < m_num_lives; ++ii)
                 p->drawPixmap((m_width_wnd-(m_pixmap_paddle_sm.width()+7)*3)+((m_pixmap_paddle_sm.width()+5)*ii), 8, m_pixmap_paddle_sm);
+
+            drawWalls(p);
 
             if (m_pause)
                 p->drawPixmap(m_width_wnd/2-m_pixmap_pause.width()/2, m_height_wnd/3, m_pixmap_pause);
@@ -394,14 +399,15 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         return true;
     }
 
-    if(pHitter == m_pixmap_ball && pHittee == m_pixmap_paddle)
+    if(pHitter == m_pixmap_ball && pSpriteHittee == m_sprite_paddle)
     {
         collisBallPaddle(pSpriteHitter, pSpriteHittee);
 
         return true;
     }
 
-    if((pHitter == m_bonus_red_star) && pHittee == m_pixmap_paddle)
+    if((pHitter == m_pixmap_bonus_red_star || pHitter == m_pixmap_bonus_green_star)
+        && pSpriteHittee == m_sprite_paddle)
     {
         collisBonusPaddle(pSpriteHitter, pSpriteHittee);
 
@@ -509,7 +515,8 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
     pSpriteHitter->kill();
 
-    if (pSpriteHitter->getPixmap() == m_bonus_red_star)
+
+    if (pSpriteHitter->getPixmap() == m_pixmap_bonus_red_star)
     {
         QPoint existingBallPos;
         int currentBalls = 0;
@@ -543,12 +550,56 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                     if (!newBall)
                         continue;
                     newBall->setPosition(existingBallPos);
+                    // int offset = (i + 1) * newBall->getWidth();
+                    // newBall->setPosition(existingBallPos.x() + offset, existingBallPos.y());
                     newBall->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
                     m_game_engine->addSprite(newBall);
                     m_sprite_ball[i] = newBall;
                     --ballsToAdd;
                 }
             }
+        }
+    }
+    else if (pSpriteHitter->getPixmap() == m_pixmap_bonus_green_star)
+    {
+        if (!m_paddleBonusActive)
+        {
+            // Запоминаем текущий левый край
+            int oldLeft = m_sprite_paddle->getPosition().x();
+
+            // Удаляем старую ракетку
+            m_sprite_paddle->kill();
+
+            // Новая ширина
+            int newWidth = static_cast<int>(m_originalPaddleWidth * 1.5);
+            int delta = newWidth - m_originalPaddleWidth;
+
+            // Вычисляем новый левый край для симметричного расширения
+            int newLeft = oldLeft - delta / 2;
+
+            // Проверка границ
+            int leftBound = m_paddle_bounds.left();
+            int rightBound = m_paddle_bounds.right();
+            if (newLeft < leftBound)
+                newLeft = leftBound;
+            else if (newLeft + newWidth > rightBound)
+                newLeft = rightBound - newWidth;
+
+            // Создаём новую ракетку с увеличенным pixmap
+            QPixmap newPix = m_pixmap_paddle.scaled(newWidth, m_originalPaddleHeight,
+                                                    Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            m_sprite_paddle = new Sprite(newPix, m_paddle_bounds, BA_STOP, this);
+            m_sprite_paddle->setPosition(newLeft, PADDLE_Y);
+
+            m_game_engine->addSprite(m_sprite_paddle);
+
+            m_paddleBonusActive = true;
+            m_paddleBonusTimer->start(10000);
+        }
+        else
+        {
+            // Продлеваем таймер
+            m_paddleBonusTimer->start(10000);
         }
     }
 }
@@ -595,6 +646,12 @@ void Game::collisBallSaucer(Sprite* pBall, Sprite* pSaucer)
 
 void Game::createNewLevel(Sprite* pSpriteHitter)
 {
+    // Сброс эффекта зелёного бонуса (если активен)
+    if (m_paddleBonusActive)
+    {
+        resetPaddleWidth();   // восстанавливает размер и останавливает таймер
+    }
+
     pSpriteHitter->kill();
     m_game_engine->cleanupSprites(m_pixmap_ball);   // удаляем все мячи
 
@@ -604,6 +661,10 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_block_2hit);
     m_game_engine->cleanupSprites(m_pixmap_block_damaged);
     m_game_engine->cleanupSprites(m_pixmap_block_solid);
+
+    // Удаляем все бонусы (звёзды)
+    m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
+    m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
 
     // Сброс тарелки для нового уровня
     if (m_sprite_saucer)
@@ -623,13 +684,43 @@ void Game::checkRandomBonus(Sprite* pSpriteHitter)
     if (!pSpriteHitter)
         return;
 
-    constexpr int BONUS_CHANCE_PERCENT = 10; // 10%
+    constexpr int BONUS_CHANCE_PERCENT = 10; // 10% шанс выпадения бонуса
     if (random(0, 99) >= BONUS_CHANCE_PERCENT)
         return;
 
-    // Пока только бонус "красная звезда" (multi-ball)
+    // Веса бонусов (сумма не обязательно 100, используем пропорции)
+    struct BonusOption
+    {
+        BonusType type;
+        int weight;
+    };
+    static const std::vector<BonusOption> options =
+    {
+        { BONUS_RED_STAR,   50 },   // 50% от выпавших бонусов
+        { BONUS_GREEN_STAR, 50 }    // 50% (можно менять веса)
+    };
+
+    int totalWeight = 0;
+    for (const auto& opt : options)
+    {
+        totalWeight += opt.weight;
+    }
+
+    int r = random(0, totalWeight - 1);
+    BonusType selectedType = options[0].type;
+    int accumulated = 0;
+    for (const auto& opt : options)
+    {
+        if (r < accumulated + opt.weight)
+        {
+            selectedType = opt.type;
+            break;
+        }
+        accumulated += opt.weight;
+    }
+
     const int FALL_SPEED = 1;
-    Sprite* bonus = new Sprite(m_bonus_red_star, m_bounds, BA_DIE, this);
+    Sprite* bonus = new Sprite(*m_bonusPixmaps[selectedType], m_bounds, BA_DIE, this);
     bonus->setPosition(pSpriteHitter->getPosition().topLeft());
     bonus->setVelocity(0, FALL_SPEED);
     m_game_engine->addSprite(bonus);
@@ -655,16 +746,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
                           QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
 
-    // === ОТЛАДКА ===
-    // static int frameCounter = 0;
-    // frameCounter++;
-    // if (frameCounter % 60 == 0)
-    // { // не засорять лог каждый кадр
-    //     qDebug() << "--- Frame" << frameCounter << "---";
-    //     qDebug() << "Ball pos:" << pSpriteHitter->getPosition() << "vel:" << pSpriteHitter->getVelocity();
-    //     qDebug() << "Brick pos:" << rect_brick.topLeft() << "size:" << rect_brick.size();
-    // }
-
     bool collided = false;
 
     if(rect_brick.contains(leftPosBall))
@@ -674,7 +755,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
                                        pSpriteHitter->getVelocity().y());
             collided = true;
-            //qDebug() << "leftPosBall  -> reflected X, new vel =" << pSpriteHitter->getVelocity();
         }
     }
     if(rect_brick.contains(rightPosBall))
@@ -684,7 +764,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
                                        pSpriteHitter->getVelocity().y());
             collided = true;
-            //qDebug() << "rightPosBall  -> reflected X, new vel =" << pSpriteHitter->getVelocity();
         }
     }
     if(rect_brick.contains(topPosBall))
@@ -694,7 +773,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
                                        -pSpriteHitter->getVelocity().y());
             collided = true;
-            //qDebug() << "topPosBall  -> reflected Y, new vel =" << pSpriteHitter->getVelocity();
         }
     }
     if(rect_brick.contains(bottomPosBall))
@@ -704,7 +782,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
                                        -pSpriteHitter->getVelocity().y());
             collided = true;
-            //qDebug() << "bottomPosBall  -> reflected Y, new vel =" << pSpriteHitter->getVelocity();
         }
     }
 
@@ -800,7 +877,7 @@ void Game::spriteDying(Sprite* pSprite)
         }
 
         // Очистить бонусы (звёзды)
-        m_game_engine->cleanupSprites(m_bonus_red_star);
+        m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
 
         // Переместить ракетку в центр
         m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
@@ -860,14 +937,26 @@ void Game::processKeys()
 // Returns a random number in [low, high].
 int Game::random(int low, int high)
 {
-    return low + rand() % ((high + 1) - low);
+    if (low > high)
+    {
+        qWarning() << "random: invalid range" << low << high;
+        return low;
+    }
+
+    int range = high - low + 1;
+
+    if (range <= 0)
+        return low;
+
+    return low + rand() % range;
+
+    //return low + rand() % ((high + 1) - low);
 }
 
 void Game::initRandomGenerator()
 {
     auto seed = QTime::currentTime().msecsSinceStartOfDay();
     QRandomGenerator::securelySeeded().seed(seed);
-    qDebug() << "Random generator initialized with seed:" << seed;
 }
 
 bool Game::loadTextures()
@@ -894,7 +983,8 @@ bool Game::loadTextures()
     m_pixmap_game_over = loadPixmap(":/images/game_over.png");
     m_pixmap_win = loadPixmap(":/images/win.png");
     m_pixmap_pause = loadPixmap(":/images/pause.png");
-    m_bonus_red_star = loadPixmap(":/images/star1.png");
+    m_pixmap_bonus_red_star = loadPixmap(":/images/star1.png");
+    m_pixmap_bonus_green_star.load(":/images/green_star.png");
     m_pixmap_block_2hit = loadPixmap(":/images/block_2hit.png");
     m_pixmap_block_damaged = loadPixmap(":/images/block_damaged.png");
     m_pixmap_block_solid = loadPixmap(":/images/block_solid.png");
