@@ -32,3 +32,6 @@ SOURCES += Background.cpp game.cpp GameEngine.cpp main.cpp sprite.cpp widget.cpp
 
 RESOURCES += \
     images.qrc
+
+DISTFILES += \
+    README.md
