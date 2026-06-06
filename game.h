@@ -117,16 +117,9 @@ private:
 
     static std::unique_ptr<Game> m_instance;
 
-    // field
-    int m_num_rows = 14;
-    int m_num_cols = 19;
-
     // paddle
     bool m_left;
     bool m_right;
-    QRect m_rect_centr_paddle;
-    QRect m_rect_left_paddle;
-    QRect m_rect_right_paddle;
     int m_num_lives;
     bool m_game_over;
     bool m_game_win;
@@ -147,8 +140,6 @@ private:
 
     int m_originalPaddleWidth;
     int m_originalPaddleHeight;
-
-    QString walls;
 };
 
 #endif // GAME_H
