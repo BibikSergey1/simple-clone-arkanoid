@@ -142,13 +142,16 @@ void Game::createLevel()
     else if (m_level == 4)
     {
         level =
+            "   RRRRRRR    "
+            "  RRRRRRRRR   "
+            " RRRRRRRRRRR  "
             "SSSSSSSSSSSSUU"
             "UUUSUUUUUSBUUB"
             "UUUSUUUUUSBUUB"
             "UUUSUUUUUSBUUB"
             "UUUSUUUUUSBBBB"
             "SUUSUUSUUSUUUB"
-            "SUUSUUSUUSUUUB"
+            "SUUBUUSUUBUUUB"
             "SUUUUUSUUUUUUB"
             "SUUUUUSUUUUUUB"
             "SSSSSSSSSSSSSS";
@@ -163,7 +166,7 @@ void Game::createLevel()
     int m_num_block_cols = NUM_BLOCK_COLS;
     if (m_level == 4)
     {
-        m_num_block_rows += 4;
+        m_num_block_rows += 7;
         m_num_block_cols += 3;
     }
     int m_block_x_gap = BLOCK_X_GAP;
@@ -174,7 +177,10 @@ void Game::createLevel()
         m_block_origin_x -= 16;
     }
     int m_block_origin_y = BLOCK_ORIGIN_Y;
-
+    if (m_level == 4)
+    {
+        m_block_origin_y -= 50;
+    }
     int y1 = m_block_origin_y;
 
     for(int row = 0; row < m_num_block_rows; ++row)
