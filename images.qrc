@@ -10,11 +10,12 @@
         <file>images/wall_ver.png</file>
         <file>images/win.png</file>
         <file>images/star1.png</file>
-        <file>images/star2.png</file>
         <file>images/block_2hit.png</file>
         <file>images/block_damaged.png</file>
         <file>images/block_solid.png</file>
         <file>images/saucer.bmp</file>
         <file>images/green_star.png</file>
+        <file>images/blue_star.png</file>
+        <file>images/ball_fast.png</file>
     </qresource>
 </RCC>

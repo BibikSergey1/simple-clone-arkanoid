@@ -44,6 +44,37 @@ void Game::resetPaddleWidth()
     m_paddleBonusTimer->stop();
 }
 
+void Game::disableFastBall()
+{
+    if (!m_fastBallActive) return;
+    m_fastBallActive = false;
+    m_currentMaxBallSpeed = MAX_BALL_SPEED;
+
+    for (int i = 0; i < BALLS; ++i)
+    {
+        if (m_sprite_ball[i])
+        {
+            QPoint vel = m_sprite_ball[i]->getVelocity();
+            // Сохраняем направление, делим скорость на коэффициент
+            double vx = static_cast<double>(vel.x()) / m_fastBallSpeedFactor;
+            double vy = static_cast<double>(vel.y()) / m_fastBallSpeedFactor;
+            int newVx = qRound(vx);
+            int newVy = qRound(vy);
+            // Не допускаем нулевую скорость
+            if (newVx == 0 && newVy == 0) {
+                newVx = (vel.x() > 0) ? 2 : (vel.x() < 0) ? -2 : 2;
+                newVy = (vel.y() > 0) ? 2 : (vel.y() < 0) ? -2 : 2;
+            }
+            m_sprite_ball[i]->setVelocity(newVx, newVy);
+            // Возвращаем обычную текстуру
+            m_sprite_ball[i]->setPixmap(m_pixmap_ball);
+            // Обновляем коллизию
+            QRect pos = m_sprite_ball[i]->getPosition();
+            m_sprite_ball[i]->setPosition(pos);
+        }
+    }
+}
+
 Game* Game::getInstance()
 {
     if(!m_instance)
@@ -66,14 +97,6 @@ bool Game::gameInitialize(int w, int h)
 
     m_width_wnd = w;
     m_height_wnd = h;
-
-    for (int i = 0; i < BALLS; ++i)
-        m_sprite_ball[i] = nullptr;
-
-    m_paddleBonusActive = false;
-    m_paddleBonusTimer = new QTimer(this);
-    m_paddleBonusTimer->setSingleShot(true);
-    connect(m_paddleBonusTimer, &QTimer::timeout, this, &Game::resetPaddleWidth);
 
     qDebug() << "Game initialized";
     return true;
@@ -99,6 +122,23 @@ void Game::gameStart()
 
     m_bonusPixmaps[BONUS_RED_STAR] = &m_pixmap_bonus_red_star;
     m_bonusPixmaps[BONUS_GREEN_STAR] = &m_pixmap_bonus_green_star;
+    m_bonusPixmaps[BONUS_BLUE_STAR] = &m_pixmap_bonus_blue_star;
+
+    for (int i = 0; i < BALLS; ++i)
+        m_sprite_ball[i] = nullptr;
+
+    m_paddleBonusActive = false;
+    m_paddleBonusTimer = new QTimer(this);
+    m_paddleBonusTimer->setSingleShot(true);
+    connect(m_paddleBonusTimer, &QTimer::timeout, this, &Game::resetPaddleWidth);
+
+    m_fastBallActive = false;
+    m_fastBallSpeedFactor = 1.5f;
+    m_fastBallTimer = new QTimer(this);
+    m_fastBallTimer->setSingleShot(true);
+    connect(m_fastBallTimer, &QTimer::timeout, this, &Game::disableFastBall);
+
+    m_currentMaxBallSpeed = MAX_BALL_SPEED;
 
     newGame();
 
@@ -417,34 +457,37 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     const QPixmap& pHitter = pSpriteHitter->getPixmap();
     const QPixmap& pHittee = pSpriteHittee->getPixmap();
 
-    if(pHitter == m_pixmap_ball && (pHittee == m_pixmap_block ||
-                                     pHittee == m_pixmap_block_blue ||
-                                     pHittee == m_pixmap_block_2hit ||
-                                     pHittee == m_pixmap_block_damaged ||
-                                     pHittee == m_pixmap_block_solid))
+    if((pHitter == m_pixmap_ball || pHitter == m_pixmap_ball_fast)
+        && (pHittee == m_pixmap_block
+            || pHittee == m_pixmap_block_blue
+            || pHittee == m_pixmap_block_2hit
+            || pHittee == m_pixmap_block_damaged
+            || pHittee == m_pixmap_block_solid))
     {
         collisBallBricks(pSpriteHitter, pSpriteHittee);
 
         return true;
     }
 
-    if(pHitter == m_pixmap_ball && pSpriteHittee == m_sprite_paddle)
+    if((pHitter == m_pixmap_ball || pHitter == m_pixmap_ball_fast)
+        && pSpriteHittee == m_sprite_paddle)
     {
         collisBallPaddle(pSpriteHitter, pSpriteHittee);
 
         return true;
     }
 
-    if((pHitter == m_pixmap_bonus_red_star || pHitter == m_pixmap_bonus_green_star)
-        && pSpriteHittee == m_sprite_paddle)
+    if((pHitter == m_pixmap_bonus_red_star
+         || pHitter == m_pixmap_bonus_green_star
+         || pHitter == m_pixmap_bonus_blue_star) && pSpriteHittee == m_sprite_paddle)
     {
         collisBonusPaddle(pSpriteHitter, pSpriteHittee);
-
         return true;
     }
 
     // Столкновение мяча с летающей тарелкой
-    if ((pHitter == m_pixmap_ball && pHittee == m_pixmap_saucer))
+    if (((pHitter == m_pixmap_ball || pHitter == m_pixmap_ball_fast)
+         && pHittee == m_pixmap_saucer))
     {
         collisBallSaucer(pSpriteHitter, pSpriteHittee);
         return true;
@@ -553,37 +596,41 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         for (auto it = m_game_engine->begin(); it != m_game_engine->end(); ++it)
         {
             Sprite* sprite = *it;
-            if (!sprite)
-            {
-                continue;
-            }
-            if (sprite->getPixmap() == m_pixmap_ball)
+            if (!sprite) continue;
+            const QPixmap& pix = sprite->getPixmap();
+            if (pix == m_pixmap_ball || pix == m_pixmap_ball_fast)
             {
                 ++currentBalls;
                 if (existingBallPos.isNull())
-                {
                     existingBallPos = sprite->getPosition().topLeft();
-                }
             }
         }
 
         int ballsToAdd = 3 - currentBalls;
-
         if (ballsToAdd > 0 && !existingBallPos.isNull())
         {
             for (int i = 0; i < BALLS && ballsToAdd > 0; ++i)
             {
                 if (m_sprite_ball[i] == nullptr)
                 {
+                    // Создаём новый мяч (обычный или быстрый в зависимости от активного бонуса)
                     Sprite* newBall = new Sprite(m_pixmap_ball, m_game_bounds, BA_BOUNCE, this);
-                    if (!newBall)
-                        continue;
                     newBall->setPosition(existingBallPos);
-                    // int offset = (i + 1) * newBall->getWidth();
-                    // newBall->setPosition(existingBallPos.x() + offset, existingBallPos.y());
-                    newBall->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
+
+                    float factor = m_fastBallActive ? m_fastBallSpeedFactor : 1.0f;
+                    int baseVelX = random(-m_vel_x, m_vel_x);
+                    int baseVelY = -m_vel_y;
+                    newBall->setVelocity(static_cast<int>(baseVelX * factor),
+                                         static_cast<int>(baseVelY * factor));
+
+                    if (m_fastBallActive)
+                        newBall->setPixmap(m_pixmap_ball_fast);
+                    else
+                        newBall->setPixmap(m_pixmap_ball);
+
                     m_game_engine->addSprite(newBall);
                     m_sprite_ball[i] = newBall;
+
                     --ballsToAdd;
                 }
             }
@@ -629,6 +676,31 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         {
             // Продлеваем таймер
             m_paddleBonusTimer->start(10000);
+        }
+    }
+    else if (pSpriteHitter->getPixmap() == m_pixmap_bonus_blue_star)
+    {
+        if (!m_fastBallActive)
+        {
+            m_fastBallActive = true;
+            m_currentMaxBallSpeed = static_cast<int>(MAX_BALL_SPEED * m_fastBallSpeedFactor);
+
+            for (int i = 0; i < BALLS; ++i)
+            {
+                if (m_sprite_ball[i])
+                {
+                    QPoint vel = m_sprite_ball[i]->getVelocity();
+                    vel.setX(static_cast<int>(vel.x() * m_fastBallSpeedFactor));
+                    vel.setY(static_cast<int>(vel.y() * m_fastBallSpeedFactor));
+                    m_sprite_ball[i]->setVelocity(vel);
+                }
+            }
+            setAllBallsPixmap(true);
+            m_fastBallTimer->start(10000);
+        }
+        else
+        {
+            m_fastBallTimer->start(10000);
         }
     }
 }
@@ -678,11 +750,18 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     // Сброс эффекта зелёного бонуса (если активен)
     if (m_paddleBonusActive)
     {
-        resetPaddleWidth();   // восстанавливает размер и останавливает таймер
+        resetPaddleWidth();
+    }
+
+    // Сброс эффекта синего бонуса (fast ball)
+    if (m_fastBallActive)
+    {
+        disableFastBall();
     }
 
     pSpriteHitter->kill();
     m_game_engine->cleanupSprites(m_pixmap_ball);   // удаляем все мячи
+    m_game_engine->cleanupSprites(m_pixmap_ball_fast);
 
     // Удаляем все типы блоков
     m_game_engine->cleanupSprites(m_pixmap_block);
@@ -694,6 +773,7 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     // Удаляем все бонусы (звёзды)
     m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
+    m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
 
     // Сброс тарелки для нового уровня
     if (m_sprite_saucer)
@@ -723,10 +803,12 @@ void Game::checkRandomBonus(Sprite* pSpriteHitter)
         BonusType type;
         int weight;
     };
+
     static const std::vector<BonusOption> options =
     {
-        { BONUS_RED_STAR,   50 },   // 50% от выпавших бонусов
-        { BONUS_GREEN_STAR, 50 }    // 50% (можно менять веса)
+        { BONUS_RED_STAR,   33 },   // 33%
+        { BONUS_GREEN_STAR, 33 },   // 33%
+        { BONUS_BLUE_STAR,  34 }    // 34%
     };
 
     int totalWeight = 0;
@@ -738,6 +820,7 @@ void Game::checkRandomBonus(Sprite* pSpriteHitter)
     int r = random(0, totalWeight - 1);
     BonusType selectedType = options[0].type;
     int accumulated = 0;
+
     for (const auto& opt : options)
     {
         if (r < accumulated + opt.weight)
@@ -760,100 +843,94 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     if (next_level)
         return;
 
+    const QPixmap& blockPix = pSpriteHittee->getPixmap();
+    bool isSolid = (blockPix == m_pixmap_block_solid);
+
+    // === FAST BALL: пробиваем любые не-solid блоки без отскока ===
+    if (m_fastBallActive && !isSolid)
+    {
+        // Уничтожаем блок (даже 2-hit или damaged – пробивается сразу)
+        checkRandomBonus(pSpriteHitter);
+        pSpriteHittee->kill();
+        --m_count_blocks;
+
+        if (m_count_blocks == 0)
+            createNewLevel(pSpriteHitter);
+        return;  // мяч продолжает полёт, скорость не меняем
+    }
+
+    // === Обычная логика отскока (или для solid блоков) ===
     QRect rect_brick(pSpriteHittee->getPosition().x(), pSpriteHittee->getPosition().y(),
                      pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
 
-    QPoint topPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
+    QPoint topPosBall = QPoint(pSpriteHitter->getPosition().x(), pSpriteHitter->getPosition().y()) +
                         QPoint(pSpriteHitter->getWidth()/2, 0);
-
-    QPoint bottomPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-                           QPoint(pSpriteHitter->getWidth()/2,pSpriteHitter->getHeight());
-
-    QPoint leftPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
+    QPoint bottomPosBall = QPoint(pSpriteHitter->getPosition().x(), pSpriteHitter->getPosition().y()) +
+                           QPoint(pSpriteHitter->getWidth()/2, pSpriteHitter->getHeight());
+    QPoint leftPosBall = QPoint(pSpriteHitter->getPosition().x(), pSpriteHitter->getPosition().y()) +
                          QPoint(0, pSpriteHitter->getHeight()/2);
-
-    QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(),pSpriteHitter->getPosition().y()) +
-                          QPoint(pSpriteHitter->getWidth(),pSpriteHitter->getHeight()/2);
+    QPoint rightPosBall = QPoint(pSpriteHitter->getPosition().x(), pSpriteHitter->getPosition().y()) +
+                          QPoint(pSpriteHitter->getWidth(), pSpriteHitter->getHeight()/2);
 
     bool collided = false;
 
-    if(rect_brick.contains(leftPosBall))
+    if (rect_brick.contains(leftPosBall) && pSpriteHitter->getVelocity().x() < 0)
     {
-        if(pSpriteHitter->getVelocity().x() < 0)
-        {
-            pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
-                                       pSpriteHitter->getVelocity().y());
-            collided = true;
-        }
+        pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
+                                   pSpriteHitter->getVelocity().y());
+        collided = true;
     }
-    if(rect_brick.contains(rightPosBall))
+    if (rect_brick.contains(rightPosBall) && pSpriteHitter->getVelocity().x() > 0)
     {
-        if(pSpriteHitter->getVelocity().x() > 0)
-        {
-            pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
-                                       pSpriteHitter->getVelocity().y());
-            collided = true;
-        }
+        pSpriteHitter->setVelocity(-pSpriteHitter->getVelocity().x(),
+                                   pSpriteHitter->getVelocity().y());
+        collided = true;
     }
-    if(rect_brick.contains(topPosBall))
+    if (rect_brick.contains(topPosBall) && pSpriteHitter->getVelocity().y() < 0)
     {
-        if(pSpriteHitter->getVelocity().y() < 0)
-        {
-            pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
-                                       -pSpriteHitter->getVelocity().y());
-            collided = true;
-        }
+        pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
+                                   -pSpriteHitter->getVelocity().y());
+        collided = true;
     }
-    if(rect_brick.contains(bottomPosBall))
+    if (rect_brick.contains(bottomPosBall) && pSpriteHitter->getVelocity().y() > 0)
     {
-        if(pSpriteHitter->getVelocity().y() > 0)
-        {
-            pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
-                                       -pSpriteHitter->getVelocity().y());
-            collided = true;
-        }
+        pSpriteHitter->setVelocity(pSpriteHitter->getVelocity().x(),
+                                   -pSpriteHitter->getVelocity().y());
+        collided = true;
     }
 
     if (collided)
     {
         // Ограничиваем скорость после отскока
         QPoint vel = pSpriteHitter->getVelocity();
-        vel.setX(qBound(-MAX_BALL_SPEED, vel.x(), MAX_BALL_SPEED));
-        vel.setY(qBound(-MAX_BALL_SPEED, vel.y(), MAX_BALL_SPEED));
+        vel.setX(qBound(-m_currentMaxBallSpeed, vel.x(), m_currentMaxBallSpeed));
+        vel.setY(qBound(-m_currentMaxBallSpeed, vel.y(), m_currentMaxBallSpeed));
 
-        // Гарантируем ненулевую скорость
         if (vel.x() == 0 && vel.y() != 0)
-        {
             vel.setX((random(0, 1) == 0) ? 2 : -2);
-        }
         if (vel.y() == 0 && vel.x() != 0)
-        {
             vel.setY((random(0, 1) == 0) ? 2 : -2);
-        }
-
         pSpriteHitter->setVelocity(vel);
 
-        const QPixmap& blockPix = pSpriteHittee->getPixmap();
-
-        if (blockPix == m_pixmap_block_2hit)
+        // Обработка типов блоков (только если не solid)
+        if (!isSolid)
         {
-            // первый удар – заменяем текстуру на повреждённую
-            pSpriteHittee->setPixmap(m_pixmap_block_damaged);
-            // m_count_blocks не уменьшаем, блок ещё жив
-        }
-        else if (blockPix == m_pixmap_block_damaged)
-        {
-            // второй удар – уничтожаем
-            checkRandomBonus(pSpriteHitter);
-            pSpriteHittee->kill();
-            --m_count_blocks;
-        }
-        else if (blockPix == m_pixmap_block || blockPix == m_pixmap_block_blue)
-        {
-            // обычный блок – уничтожаем сразу
-            checkRandomBonus(pSpriteHitter);
-            pSpriteHittee->kill();
-            --m_count_blocks;
+            if (blockPix == m_pixmap_block_2hit)
+            {
+                pSpriteHittee->setPixmap(m_pixmap_block_damaged);
+            }
+            else if (blockPix == m_pixmap_block_damaged)
+            {
+                checkRandomBonus(pSpriteHitter);
+                pSpriteHittee->kill();
+                --m_count_blocks;
+            }
+            else if (blockPix == m_pixmap_block || blockPix == m_pixmap_block_blue)
+            {
+                checkRandomBonus(pSpriteHitter);
+                pSpriteHittee->kill();
+                --m_count_blocks;
+            }
         }
 
         if (m_count_blocks == 0)
@@ -868,12 +945,25 @@ void Game::addEnemy()
 
 }
 
+int Game::countBalls() const
+{
+    int count = 0;
+    for (auto it = m_game_engine->begin(); it != m_game_engine->end(); ++it)
+    {
+        const QPixmap& p = (*it)->getPixmap();
+        if (p == m_pixmap_ball || p == m_pixmap_ball_fast)
+            ++count;
+    }
+    return count;
+}
+
 void Game::spriteDying(Sprite* pSprite)
 {
     // Определяем, что именно умирает
-    bool isBall = (pSprite->getPixmap() == m_pixmap_ball);
+    const QPixmap& pix = pSprite->getPixmap();
+    bool isBall = (pix == m_pixmap_ball || pix == m_pixmap_ball_fast);
     if (!isBall)
-        return; // другие типы спрайтов (бонусы, враги) обрабатываем отдельно, если нужно
+        return;
 
     // Обнуляем указатель в массиве мячей
     for (int i = 0; i < BALLS; ++i)
@@ -888,7 +978,7 @@ void Game::spriteDying(Sprite* pSprite)
     // Уменьшаем счётчик мячей (не вызывая countSprites)
     // Но лучше вести учёт при добавлении/удалении мячей.
     // Пока используем countSprites для простоты, но запоминаем результат.
-    int ballsLeft = m_game_engine->countSprites(m_pixmap_ball) - 1; // текущий мяч ещё не удалён из контейнера
+    int ballsLeft = countBalls() - 1; // текущий мяч ещё не удалён из контейнера
 
     if (ballsLeft == 0)  // был последний мяч
     {
@@ -905,8 +995,19 @@ void Game::spriteDying(Sprite* pSprite)
             return;  // не продолжаем — игра окончена
         }
 
-        // Очистить бонусы (звёзды)
+        if (m_fastBallActive)
+        {
+            disableFastBall();   // отключает fast ball, восстанавливает лимит скорости и текстуру
+        }
+        if (m_paddleBonusActive)
+        {
+            resetPaddleWidth();  // возвращает ракетку к исходному размеру
+        }
+
+        // Очистить все бонусы на поле (звёзды)
         m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
+        m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
+        m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
 
         // Переместить ракетку в центр
         m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
@@ -978,8 +1079,6 @@ int Game::random(int low, int high)
         return low;
 
     return low + rand() % range;
-
-    //return low + rand() % ((high + 1) - low);
 }
 
 void Game::initRandomGenerator()
@@ -1009,11 +1108,13 @@ bool Game::loadTextures()
     m_pixmap_block = loadPixmap(":/images/block.png");
     m_pixmap_block_blue = loadPixmap(":/images/block_blue.png");
     m_pixmap_ball = loadPixmap(":/images/ball.png");
+    m_pixmap_ball_fast = loadPixmap(":/images/ball_fast.png");
     m_pixmap_game_over = loadPixmap(":/images/game_over.png");
     m_pixmap_win = loadPixmap(":/images/win.png");
     m_pixmap_pause = loadPixmap(":/images/pause.png");
     m_pixmap_bonus_red_star = loadPixmap(":/images/star1.png");
     m_pixmap_bonus_green_star.load(":/images/green_star.png");
+    m_pixmap_bonus_blue_star.load(":/images/blue_star.png");
     m_pixmap_block_2hit = loadPixmap(":/images/block_2hit.png");
     m_pixmap_block_damaged = loadPixmap(":/images/block_damaged.png");
     m_pixmap_block_solid = loadPixmap(":/images/block_solid.png");
@@ -1043,6 +1144,7 @@ void Game::scaleTextures()
     scaleFast(m_pixmap_block_2hit, BLOCK_SIZE);
     scaleFast(m_pixmap_block_damaged, BLOCK_SIZE);
     scaleFast(m_pixmap_block_solid, BLOCK_SIZE);
+    scaleFast(m_pixmap_ball_fast, BALL_SIZE);
 
     // Маленькая версия платформы
     if (!m_pixmap_paddle.isNull())
@@ -1066,6 +1168,21 @@ void Game::setupMask()
         QColor madjenta(255, 0, 255);
         QBitmap mask = m_pixmap_saucer.createMaskFromColor(madjenta);
         m_pixmap_saucer.setMask(mask);
+    }
+}
+
+void Game::setAllBallsPixmap(bool fast)
+{
+    QPixmap& target = fast ? m_pixmap_ball_fast : m_pixmap_ball;
+    for (int i = 0; i < BALLS; ++i)
+    {
+        if (m_sprite_ball[i])
+        {
+            m_sprite_ball[i]->setPixmap(target);
+            // Обновляем коллизию, имитируя перемещение на то же место
+            QRect pos = m_sprite_ball[i]->getPosition();
+            m_sprite_ball[i]->setPosition(pos);
+        }
     }
 }
 
@@ -1117,7 +1234,7 @@ void Game::updateSaucer()
     if (velocity.y() < desiredY) velocity.setY(velocity.y() + 1);
     if (velocity.y() > desiredY) velocity.setY(velocity.y() - 1);
 
-    // ========== 2. Поиск ближайшего блока (как раньше) ==========
+    // ========== 2. Поиск ближайшего блока ==========
     int centerX = saucerRect.center().x();
     int centerY = saucerRect.center().y();
     int closestDx = 0, closestDy = 0;

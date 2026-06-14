@@ -32,6 +32,7 @@ private:
 
 private slots:
     void resetPaddleWidth();
+    void disableFastBall();
 
 private:
     explicit Game(QObject* parent = nullptr);
@@ -68,6 +69,8 @@ private:
     void scaleTextures();
     void setupMask();
     void drawWalls(QPainter* p);
+    void setAllBallsPixmap(bool fast);
+    int countBalls() const;
 
     QRect m_bounds;
     QRect m_game_bounds;
@@ -78,6 +81,7 @@ private:
     QPixmap m_pixmap_block;
     QPixmap m_pixmap_block_blue;
     QPixmap m_pixmap_ball;
+    QPixmap m_pixmap_ball_fast;
     QPixmap m_pixmap_wall_h;
     QPixmap m_pixmap_wall_v;
     QPixmap m_pixmap_paddle;
@@ -87,6 +91,7 @@ private:
     QPixmap m_pixmap_pause;
     QPixmap m_pixmap_bonus_red_star;
     QPixmap m_pixmap_bonus_green_star;
+    QPixmap m_pixmap_bonus_blue_star;
     QPixmap m_pixmap_block_2hit;   // блок с двумя жизнями (неповреждённый)
     QPixmap m_pixmap_block_damaged; // блок после первого удара
     QPixmap m_pixmap_block_solid;// не разрушаемый блок
@@ -96,6 +101,7 @@ private:
     {
         BONUS_RED_STAR,
         BONUS_GREEN_STAR,
+        BONUS_BLUE_STAR,
         // ... сюда можно добавлять новые
         BONUS_COUNT
     };
@@ -140,6 +146,11 @@ private:
 
     int m_originalPaddleWidth;
     int m_originalPaddleHeight;
+
+    bool m_fastBallActive;
+    QTimer* m_fastBallTimer;
+    float m_fastBallSpeedFactor;   // множитель скорости (например, 1.5)
+    int m_currentMaxBallSpeed;
 };
 
 #endif // GAME_H
