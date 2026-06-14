@@ -6,7 +6,7 @@ TEMPLATE = app
 TARGET = game_app
 INCLUDEPATH += .
 
-QT       += core gui widgets
+QT       += core gui widgets multimedia
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -31,7 +31,8 @@ SOURCES += Background.cpp game.cpp GameEngine.cpp main.cpp sprite.cpp widget.cpp
     
 
 RESOURCES += \
-    images.qrc
+    images.qrc \
+    sounds.qrc
 
 DISTFILES += \
     README.md

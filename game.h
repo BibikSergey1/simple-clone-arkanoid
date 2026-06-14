@@ -6,6 +6,7 @@
 #include "Background.h"
 #include <qobject.h>
 #include <memory>
+#include <QSoundEffect>
 
 class Game : public QObject
 {
@@ -95,6 +96,7 @@ private:
     QPixmap m_pixmap_block_2hit;   // блок с двумя жизнями (неповреждённый)
     QPixmap m_pixmap_block_damaged; // блок после первого удара
     QPixmap m_pixmap_block_solid;// не разрушаемый блок
+    QPixmap m_pixmap_block_solid_flash;
     QPixmap m_pixmap_saucer;
 
     enum BonusType
@@ -151,6 +153,10 @@ private:
     QTimer* m_fastBallTimer;
     float m_fastBallSpeedFactor;   // множитель скорости (например, 1.5)
     int m_currentMaxBallSpeed;
+
+    QSoundEffect* m_blockHitSound;
+    QSoundEffect* m_solidBlockHitSound;
+    QSoundEffect* m_paddleHitSound;
 };
 
 #endif // GAME_H

@@ -140,6 +140,18 @@ void Game::gameStart()
 
     m_currentMaxBallSpeed = MAX_BALL_SPEED;
 
+    m_blockHitSound = new QSoundEffect(this);
+    m_blockHitSound->setSource(QUrl("qrc:/sounds/click4.wav"));
+    m_blockHitSound->setVolume(0.5f); // громкость 50%
+
+    m_solidBlockHitSound = new QSoundEffect(this);
+    m_solidBlockHitSound->setSource(QUrl("qrc:/sounds/click.wav"));
+    m_solidBlockHitSound->setVolume(0.5f);
+
+    m_paddleHitSound = new QSoundEffect(this);
+    m_paddleHitSound->setSource(QUrl("qrc:/sounds/connect.wav"));
+    m_paddleHitSound->setVolume(0.6f);
+
     newGame();
 
     qDebug() << "Game started with all resources loaded";
@@ -518,6 +530,10 @@ void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     // 4. Если точка не внутри ракетки — выходим
     if (!paddleRect.contains(ballBottom))
         return;
+
+    // Воспроизводим звук
+    if (m_paddleHitSound && !m_paddleHitSound->isPlaying())
+        m_paddleHitSound->play();
 
     // 5. Смещение от центра ракетки (-1..1)
     //    Вычисляем, как далеко от центра ракетки пришёлся удар.
@@ -901,6 +917,31 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
     if (collided)
     {
+        // Мерцание для неразрушимого блока (solid)
+        if (isSolid)
+        {
+            // Воспроизводим звук
+            if (!m_solidBlockHitSound->isLoaded())
+            {
+                qWarning() << "Sound not loaded! Error:" << m_solidBlockHitSound->Error;
+            }
+            else
+            {
+                m_solidBlockHitSound->play();
+            }
+
+            // Сохраняем оригинальную текстуру
+            QPixmap originalPix = pSpriteHittee->getPixmap();
+            // Заменяем на текстуру-вспышку
+            pSpriteHittee->setPixmap(m_pixmap_block_solid_flash);
+            // Через 100 мс возвращаем оригинал
+            QTimer::singleShot(100, this, [pSpriteHittee, originalPix]()
+            {
+                if (pSpriteHittee)
+                    pSpriteHittee->setPixmap(originalPix);
+            });
+        }
+
         // Ограничиваем скорость после отскока
         QPoint vel = pSpriteHitter->getVelocity();
         vel.setX(qBound(-m_currentMaxBallSpeed, vel.x(), m_currentMaxBallSpeed));
@@ -931,6 +972,12 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                 pSpriteHittee->kill();
                 --m_count_blocks;
             }
+
+            if (m_solidBlockHitSound && m_solidBlockHitSound->isLoaded())
+            {
+                m_blockHitSound->play();
+            }
+
         }
 
         if (m_count_blocks == 0)
@@ -1118,6 +1165,7 @@ bool Game::loadTextures()
     m_pixmap_block_2hit = loadPixmap(":/images/block_2hit.png");
     m_pixmap_block_damaged = loadPixmap(":/images/block_damaged.png");
     m_pixmap_block_solid = loadPixmap(":/images/block_solid.png");
+    m_pixmap_block_solid_flash = loadPixmap(":/images/block_solid_flash.png");
     m_pixmap_saucer = loadPixmap(":/images/saucer.bmp");
 
     // Масштабирование с правильными параметрами
@@ -1144,6 +1192,7 @@ void Game::scaleTextures()
     scaleFast(m_pixmap_block_2hit, BLOCK_SIZE);
     scaleFast(m_pixmap_block_damaged, BLOCK_SIZE);
     scaleFast(m_pixmap_block_solid, BLOCK_SIZE);
+    scaleFast(m_pixmap_block_solid_flash, BLOCK_SIZE);
     scaleFast(m_pixmap_ball_fast, BALL_SIZE);
 
     // Маленькая версия платформы
