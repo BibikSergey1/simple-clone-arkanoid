@@ -61,7 +61,8 @@ void Game::disableFastBall()
             int newVx = qRound(vx);
             int newVy = qRound(vy);
             // Не допускаем нулевую скорость
-            if (newVx == 0 && newVy == 0) {
+            if (newVx == 0 && newVy == 0)
+            {
                 newVx = (vel.x() > 0) ? 2 : (vel.x() < 0) ? -2 : 2;
                 newVy = (vel.y() > 0) ? 2 : (vel.y() < 0) ? -2 : 2;
             }
@@ -151,6 +152,10 @@ void Game::gameStart()
     m_paddleHitSound = new QSoundEffect(this);
     m_paddleHitSound->setSource(QUrl("qrc:/sounds/connect.wav"));
     m_paddleHitSound->setVolume(0.6f);
+
+    m_saucerHitSound = new QSoundEffect(this);
+    m_saucerHitSound->setSource(QUrl("qrc:/sounds/click3.wav"));
+    m_saucerHitSound->setVolume(0.5f);
 
     newGame();
 
@@ -477,7 +482,6 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             || pHittee == m_pixmap_block_solid))
     {
         collisBallBricks(pSpriteHitter, pSpriteHittee);
-
         return true;
     }
 
@@ -485,7 +489,6 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         && pSpriteHittee == m_sprite_paddle)
     {
         collisBallPaddle(pSpriteHitter, pSpriteHittee);
-
         return true;
     }
 
@@ -758,6 +761,11 @@ void Game::collisBallSaucer(Sprite* pBall, Sprite* pSaucer)
     else if (minOverlap == overlapBottom)
         separation.setY(overlapBottom + 1);
 
+    if (m_saucerHitSound && m_saucerHitSound->isLoaded())
+    {
+        m_saucerHitSound->play();
+    }
+
     pBall->setPosition(ballRect.translated(separation));
 }
 
@@ -869,6 +877,11 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         checkRandomBonus(pSpriteHitter);
         pSpriteHittee->kill();
         --m_count_blocks;
+
+        if (m_solidBlockHitSound && m_solidBlockHitSound->isLoaded())
+        {
+            m_blockHitSound->play();
+        }
 
         if (m_count_blocks == 0)
             createNewLevel(pSpriteHitter);

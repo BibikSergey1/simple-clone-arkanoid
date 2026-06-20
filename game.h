@@ -157,6 +157,7 @@ private:
     QSoundEffect* m_blockHitSound;
     QSoundEffect* m_solidBlockHitSound;
     QSoundEffect* m_paddleHitSound;
+    QSoundEffect* m_saucerHitSound;
 };
 
 #endif // GAME_H
