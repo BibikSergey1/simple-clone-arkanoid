@@ -25,6 +25,9 @@ public:
     void handleKeys(bool left, bool right, bool pause);
     bool spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     void spriteDying(Sprite* pSprite);
+    bool isGameActive() const;
+    void setBallLaunched(bool isLaunched) { m_ballLaunched = isLaunched; }
+    bool enemyExists() const;
 
 private:
     void addEnemy();
@@ -62,6 +65,9 @@ private:
     void collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     void collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee);
     void collisBallSaucer(Sprite* pBall, Sprite* pSaucer);
+    void collisBallEnemy(Sprite* pBall, Sprite* pEnemy);
+    void collisBallMissile(Sprite* pBall, Sprite* pMissile);
+    void collisMissilePaddle(Sprite* pBall, Sprite* pMissile);
     int random(int a, int b);
     void processKeys();
     void checkRandomBonus(Sprite* pSpriteHitter);
@@ -72,6 +78,11 @@ private:
     void drawWalls(QPainter* p);
     void setAllBallsPixmap(bool fast);
     int countBalls() const;
+    void removeEnemy();      // удаляет врага и останавливает таймер
+    void scheduleEnemyRespawn(int delayMs = 5000);
+    void respawnEnemy(); // слот для таймера
+    void createExplosion(Sprite* pHitter, Sprite* pHittee);
+    void loseLife();
 
     QRect m_bounds;
     QRect m_game_bounds;
@@ -98,6 +109,9 @@ private:
     QPixmap m_pixmap_block_solid;// не разрушаемый блок
     QPixmap m_pixmap_block_solid_flash;
     QPixmap m_pixmap_saucer;
+    QPixmap m_pixmap_bat;
+    QPixmap m_pixmap_missile_bat;
+    QPixmap m_pixmap_explosion;
 
     enum BonusType
     {
@@ -119,6 +133,7 @@ private:
     Sprite* m_sprite_ball[BALLS];
     Sprite* m_sprite_paddle = nullptr;
     Sprite* m_sprite_saucer = nullptr;
+    Sprite* m_sprite_enemy = nullptr;
 
     int m_width_wnd;
     int m_height_wnd;
@@ -158,6 +173,12 @@ private:
     QSoundEffect* m_solidBlockHitSound;
     QSoundEffect* m_paddleHitSound;
     QSoundEffect* m_saucerHitSound;
+    QSoundEffect* m_explodeSound;
+
+    bool m_ballLaunched;
+
+    QTimer* m_enemyRespawnTimer;
+    bool m_enemyExists = false;
 };
 
 #endif // GAME_H

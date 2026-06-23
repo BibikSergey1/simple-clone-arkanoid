@@ -4,5 +4,6 @@
         <file>sounds/connect.wav</file>
         <file>sounds/click4.wav</file>
         <file>sounds/click3.wav</file>
+        <file>sounds/explode.wav</file>
     </qresource>
 </RCC>

@@ -18,5 +18,8 @@
         <file>images/blue_star.png</file>
         <file>images/ball_fast.png</file>
         <file>images/block_solid_flash.png</file>
+        <file>images/bat.png</file>
+        <file>images/LgExplosion.bmp</file>
+        <file>images/TMissile.bmp</file>
     </qresource>
 </RCC>

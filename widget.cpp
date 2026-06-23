@@ -192,6 +192,10 @@ void Widget::keyPressEvent(QKeyEvent *event)
         close();
         return;
 
+    case Qt::Key_Space:
+        Game::getInstance()->setBallLaunched(true);
+        break;
+
     default:
         QWidget::keyPressEvent(event);
         return;

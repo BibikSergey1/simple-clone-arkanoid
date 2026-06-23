@@ -8,6 +8,8 @@
 #include <widget.h>
 #include <cmath>
 #include <QPointer>
+#include <QFile>
+#include "EnemySprite.h"
 
 std::unique_ptr<Game> Game::m_instance = nullptr;
 
@@ -99,6 +101,8 @@ bool Game::gameInitialize(int w, int h)
     m_width_wnd = w;
     m_height_wnd = h;
 
+    m_enemyExists = false;
+
     qDebug() << "Game initialized";
     return true;
 }
@@ -157,6 +161,11 @@ void Game::gameStart()
     m_saucerHitSound->setSource(QUrl("qrc:/sounds/click3.wav"));
     m_saucerHitSound->setVolume(0.5f);
 
+    m_explodeSound = new QSoundEffect(this);
+    m_explodeSound->setSource(QUrl("qrc:/sounds/explode.wav"));
+    m_explodeSound->setVolume(0.5f);
+
+    qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
     newGame();
 
     qDebug() << "Game started with all resources loaded";
@@ -283,6 +292,8 @@ void Game::createLevel()
         }
         y1 += m_block_y_gap;
     }
+
+    addEnemy();
 }
 
 void Game::createBall()
@@ -341,6 +352,8 @@ void Game::newGame()
                 sprite->setVelocity(random(-m_vel_x, m_vel_x), -m_vel_y);
             }
         }
+
+        m_ballLaunched = true;
     });
 
     // Background
@@ -356,11 +369,16 @@ void Game::newGame()
     m_game_over = false;
     m_game_win = false;
     next_level = false;
+    m_ballLaunched = false;
 
     if (m_paddleBonusActive)
         resetPaddleWidth();
 
     m_paddleBonusActive = false;
+
+    m_enemyRespawnTimer = new QTimer(this);
+    m_enemyRespawnTimer->setSingleShot(true);
+    connect(m_enemyRespawnTimer, &QTimer::timeout, this, &Game::respawnEnemy);
 }
 
 void Game::gameActivate()
@@ -371,6 +389,36 @@ void Game::gameActivate()
 void Game::gameDeactivate()
 {
     m_pause = true;
+}
+
+void Game::removeEnemy()
+{
+    if (m_enemyRespawnTimer && m_enemyRespawnTimer->isActive())
+        m_enemyRespawnTimer->stop();
+
+    // Удаляем спрайт врага, если он есть
+    if (m_enemyExists)
+    {
+        m_game_engine->cleanupSprites(m_pixmap_bat);
+        m_enemyExists = false;
+    }
+    // Также удаляем все бомбы (чтобы не висели)
+    m_game_engine->cleanupSprites(m_pixmap_missile_bat);
+}
+
+void Game::respawnEnemy()
+{
+    if (!m_enemyExists)
+    {
+        addEnemy();
+    }
+}
+
+void Game::scheduleEnemyRespawn(int delayMs)
+{
+    if (m_enemyRespawnTimer->isActive())
+        m_enemyRespawnTimer->stop();
+    m_enemyRespawnTimer->start(delayMs);
 }
 
 void Game::drawWalls(QPainter* p)
@@ -508,7 +556,83 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         return true;
     }
 
+    // Столкновение мяча (обычного или быстрого) с врагом
+    if ((pHitter == m_pixmap_ball || pHitter == m_pixmap_ball_fast) && pHittee == m_pixmap_bat)
+    {
+        collisBallEnemy(pSpriteHitter, pSpriteHittee);
+        return true;
+    }
+
+    // Столкновение мяча с бомбой
+    if ((pHitter == m_pixmap_ball || pHitter == m_pixmap_ball_fast) && pHittee == m_pixmap_missile_bat)
+    {
+        collisBallMissile(pSpriteHitter, pSpriteHittee);
+        return true;
+    }
+
+    // Столкновение бомбы с ракеткой (оба порядка)
+    if ((pHitter == m_pixmap_missile_bat && pSpriteHittee == m_sprite_paddle) ||
+        (pSpriteHitter == m_sprite_paddle && pHittee == m_pixmap_missile_bat))
+    {
+        collisMissilePaddle(pSpriteHitter, pSpriteHittee);
+        return true;
+    }
+
     return false;
+}
+
+void Game::collisBallEnemy(Sprite* pBall, Sprite* pEnemy)
+{
+    createExplosion(pBall, pEnemy);
+
+    pEnemy->kill();
+    m_enemyExists = false;
+
+    scheduleEnemyRespawn(5000); // респавн через 5 секунд
+
+    // Отскок мяча
+    QPoint vel = pBall->getVelocity();
+    vel.setY(-vel.y());
+    pBall->setVelocity(vel);
+}
+
+void Game::createExplosion(Sprite* pHitter, Sprite* pHittee)
+{
+    QRect rcPos;
+    if (pHittee == m_sprite_enemy)
+        rcPos = pHittee->getPosition();
+    else
+        rcPos = pHitter->getPosition();
+
+    Sprite* pSprite = new Sprite(m_pixmap_explosion, m_game_bounds);
+    pSprite->setNumFrames(8, true);
+    pSprite->setFrameDelay(4);
+    pSprite->setPosition(rcPos.left(), rcPos.top());
+    m_game_engine->addSprite(pSprite);
+
+    if (m_explodeSound && m_explodeSound->isLoaded())
+    {
+        m_explodeSound->play();
+    }
+}
+
+void Game::collisBallMissile(Sprite* pBall, Sprite* pMissile)
+{
+    createExplosion(pBall, pMissile);
+
+    // Убиваем бомбу
+    pMissile->kill();
+    // Мяч не меняет скорость (пролетает сквозь)
+}
+
+void Game::collisMissilePaddle(Sprite* pBall, Sprite* pMissile)
+{
+    createExplosion(pBall, pMissile);
+
+    // Убиваем бомбу
+    pMissile->kill();
+    // Потеря жизни
+    loseLife();
 }
 
 void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
@@ -771,33 +895,33 @@ void Game::collisBallSaucer(Sprite* pBall, Sprite* pSaucer)
 
 void Game::createNewLevel(Sprite* pSpriteHitter)
 {
-    // Сброс эффекта зелёного бонуса (если активен)
-    if (m_paddleBonusActive)
-    {
-        resetPaddleWidth();
-    }
+    // Отменить респавн и удалить врага
+    if (m_enemyRespawnTimer->isActive())
+        m_enemyRespawnTimer->stop();
 
-    // Сброс эффекта синего бонуса (fast ball)
-    if (m_fastBallActive)
-    {
-        disableFastBall();
-    }
+    removeEnemy();
+
+    // Сброс эффекта зелёного бонуса (если активен)
+    if (m_paddleBonusActive) resetPaddleWidth();
+    if (m_fastBallActive) disableFastBall();
 
     pSpriteHitter->kill();
-    m_game_engine->cleanupSprites(m_pixmap_ball);   // удаляем все мячи
+    // Очистка мячей, блоков, бонусов, врага и бомб
+    m_game_engine->cleanupSprites(m_pixmap_ball);
     m_game_engine->cleanupSprites(m_pixmap_ball_fast);
-
-    // Удаляем все типы блоков
     m_game_engine->cleanupSprites(m_pixmap_block);
     m_game_engine->cleanupSprites(m_pixmap_block_blue);
     m_game_engine->cleanupSprites(m_pixmap_block_2hit);
     m_game_engine->cleanupSprites(m_pixmap_block_damaged);
     m_game_engine->cleanupSprites(m_pixmap_block_solid);
-
-    // Удаляем все бонусы (звёзды)
     m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
+    m_game_engine->cleanupSprites(m_pixmap_bat);
+    m_game_engine->cleanupSprites(m_pixmap_missile_bat);
+
+    // Обнуляем массив указателей на мячи
+    for (int i = 0; i < BALLS; ++i) m_sprite_ball[i] = nullptr;
 
     // Сброс тарелки для нового уровня
     if (m_sprite_saucer)
@@ -806,10 +930,34 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
         m_sprite_saucer->setVelocity(3, 1);
     }
 
+    // Увеличиваем уровень и создаём новый
     next_level = true;
     ++m_level;
     createLevel();
+
+    // Перемещаем ракетку в центр (если она существует)
     m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
+
+    // создаём мяч и запускаем его через 1.5 секунды
+    createBall();
+    m_ballLaunched = false;
+
+    QPointer<Game> self(this);
+    float velX = m_vel_x;
+    float velY = m_vel_y;
+    QTimer::singleShot(1500, this, [self, velX, velY]()
+    {
+        if (self.isNull()) return;
+        for (auto it = self->m_game_engine->begin(); it != self->m_game_engine->end(); ++it)
+        {
+            if ((*it)->getPixmap() == self->m_pixmap_ball)
+            {
+                (*it)->setVelocity(self->random(-velX, velX), -velY);
+            }
+        }
+        self->next_level = false;
+        self->m_ballLaunched = true;
+    });
 }
 
 void Game::checkRandomBonus(Sprite* pSpriteHitter)
@@ -870,7 +1018,7 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     const QPixmap& blockPix = pSpriteHittee->getPixmap();
     bool isSolid = (blockPix == m_pixmap_block_solid);
 
-    // === FAST BALL: пробиваем любые не-solid блоки без отскока ===
+    // пробиваем любые не-solid блоки без отскока
     if (m_fastBallActive && !isSolid)
     {
         // Уничтожаем блок (даже 2-hit или damaged – пробивается сразу)
@@ -888,7 +1036,7 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         return;  // мяч продолжает полёт, скорость не меняем
     }
 
-    // === Обычная логика отскока (или для solid блоков) ===
+    // Обычная логика отскока (или для solid блоков)
     QRect rect_brick(pSpriteHittee->getPosition().x(), pSpriteHittee->getPosition().y(),
                      pSpriteHittee->getWidth(), pSpriteHittee->getHeight());
 
@@ -1002,7 +1150,45 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
 void Game::addEnemy()
 {
+    if (m_enemyExists)
+    {
+        return;
+    }
 
+    QRect rcBounds = QRect(BALL_MARGIN_LEFT,
+                           BLOCK_SIZE.height() * 2 - UP_MARGIN,
+                           WINDOW_WIDTH - BALL_MARGIN_RIGHT,
+                           100);
+
+    m_sprite_enemy = new EnemySprite(this, m_pixmap_bat, m_pixmap_missile_bat,
+                                           rcBounds, BA_BOUNCE);
+    m_sprite_enemy->setNumFrames(4);
+    m_sprite_enemy->setFrameDelay(8);
+
+    // Начальная позиция: не слишком близко к краям (отступ 20 пикселей)
+    int margin = 20;
+    int maxX = rcBounds.right() - m_sprite_enemy->getWidth() - margin;
+    if (maxX < margin) maxX = margin + 10;
+    int startX = margin + rand() % (maxX - margin + 1);
+    int startY = rand() % 100 + 10; // небольшой отступ сверху
+    m_sprite_enemy->setPosition(startX, startY);
+
+    // Горизонтальная скорость: всегда ненулевая (от -3 до 3, исключая 0)
+    int vx = 0;
+    while (vx == 0)
+    {
+        vx = (rand() % 7) - 3; // диапазон -3..3
+    }
+    // Вертикальная скорость: может быть нулевой, но лучше тоже задать небольшую
+    int vy = (rand() % 5) - 2; // -2..2 (может быть 0)
+    if (vy == 0)
+        vy = (rand() % 2 == 0) ? 1 : -1; // чтобы двигался по вертикали хоть немного
+
+    m_sprite_enemy->setVelocity(vx, vy);
+
+    m_game_engine->addSprite(m_sprite_enemy);
+
+    m_enemyExists = true;
 }
 
 int Game::countBalls() const
@@ -1015,6 +1201,79 @@ int Game::countBalls() const
             ++count;
     }
     return count;
+}
+
+bool Game::isGameActive() const
+{
+    return !m_pause && !next_level && m_ballLaunched;
+}
+
+void Game::loseLife()
+{
+    --m_num_lives;
+    if (m_num_lives == 0)
+    {
+        m_game_over = true;
+        return;
+    }
+
+    // 1. Отменить любой запланированный респавн врага
+    if (m_enemyRespawnTimer->isActive())
+        m_enemyRespawnTimer->stop();
+
+    // Удаляем все мячи (обычные и быстрые)
+    m_game_engine->cleanupSprites(m_pixmap_ball);
+    m_game_engine->cleanupSprites(m_pixmap_ball_fast);
+
+    // Очищаем бонусы (звёзды)
+    m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
+    m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
+    m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
+
+    // Удаляем бомбы (врага оставляем, но если он есть, он будет удалён ниже)
+    m_game_engine->cleanupSprites(m_pixmap_missile_bat);
+
+    // Сброс активных бонусов
+    if (m_paddleBonusActive)
+        resetPaddleWidth();
+    if (m_fastBallActive)
+        disableFastBall();
+
+    // Обнуляем массив указателей на мячи
+    for (int i = 0; i < BALLS; ++i)
+        m_sprite_ball[i] = nullptr;
+
+    m_sprite_paddle->kill();
+
+    m_paddle_bounds = QRect(PADDLE_MARGIN_LEFT,
+                            BLOCK_SIZE.height() * 2 - UP_MARGIN,
+                            m_width_wnd - PADDLE_MARGIN_RIGHT,
+                            m_height_wnd);
+
+    m_sprite_paddle = new Sprite(m_pixmap_paddle, m_paddle_bounds, BA_STOP, this);
+    m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
+    m_game_engine->addSprite(m_sprite_paddle);
+
+    // Создаём новый мяч на ракетке
+    createBall();
+    m_ballLaunched = false;
+
+    // Запускаем таймер для старта мяча через 1.5 сек
+    QPointer<Game> self(this);
+    float velX = m_vel_x;
+    float velY = m_vel_y;
+    QTimer::singleShot(1500, this, [self, velX, velY]() {
+        if (self.isNull()) return;
+        for (auto it = self->m_game_engine->begin(); it != self->m_game_engine->end(); ++it) {
+            if ((*it)->getPixmap() == self->m_pixmap_ball) {
+                (*it)->setVelocity(self->random(-velX, velX), -velY);
+            }
+        }
+        self->next_level = false;
+        self->m_ballLaunched = true;
+    });
+
+    scheduleEnemyRespawn(2000);
 }
 
 void Game::spriteDying(Sprite* pSprite)
@@ -1042,56 +1301,8 @@ void Game::spriteDying(Sprite* pSprite)
 
     if (ballsLeft == 0)  // был последний мяч
     {
-        // Потеря жизни
-        if (!next_level)  // только если не переходим на следующий уровень
-        {
-            --m_num_lives;
-        }
-        // Не сбрасываем next_level здесь (его сброс происходит при начале уровня)
-
-        if (m_num_lives == 0)
-        {
-            m_game_over = true;
-            return;  // не продолжаем — игра окончена
-        }
-
-        if (m_fastBallActive)
-        {
-            disableFastBall();   // отключает fast ball, восстанавливает лимит скорости и текстуру
-        }
-        if (m_paddleBonusActive)
-        {
-            resetPaddleWidth();  // возвращает ракетку к исходному размеру
-        }
-
-        // Очистить все бонусы на поле (звёзды)
-        m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
-        m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
-        m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
-
-        // Переместить ракетку в центр
-        m_sprite_paddle->setPosition(m_width_wnd/2 - m_sprite_paddle->getWidth()/2, PADDLE_Y);
-
-        // Создать новый мяч
-        createBall();
-
-        QPointer<Game> self(this);
-        float velX = m_vel_x;
-        float velY = m_vel_y;
-
-        QTimer::singleShot(1500, this, [self, velX, velY]()
-        {
-            if (self.isNull())
-                return;
-            for (auto it = self->m_game_engine->begin(); it != self->m_game_engine->end(); ++it)
-            {
-                if ((*it)->getPixmap() == self->m_pixmap_ball)
-                {
-                   (*it)->setVelocity(self->random(-velX, velX), -velY);
-                }
-            }
-            self->next_level = false;
-        });
+        loseLife();
+        return;
     }
 }
 
@@ -1180,6 +1391,15 @@ bool Game::loadTextures()
     m_pixmap_block_solid = loadPixmap(":/images/block_solid.png");
     m_pixmap_block_solid_flash = loadPixmap(":/images/block_solid_flash.png");
     m_pixmap_saucer = loadPixmap(":/images/saucer.bmp");
+
+    m_pixmap_bat = loadPixmap(":/images/bat.png");
+    m_pixmap_bat.setMask(m_pixmap_bat.createMaskFromColor(QColor(0,0,0)));
+
+    m_pixmap_missile_bat = loadPixmap(":/images/TMissile.bmp");
+    m_pixmap_missile_bat.setMask(m_pixmap_missile_bat.createMaskFromColor(QColor(252,0,252)));
+
+    m_pixmap_explosion = loadPixmap(":/images/LgExplosion.bmp");
+    m_pixmap_explosion.setMask(m_pixmap_explosion.createMaskFromColor(QColor(252,0,252)));
 
     // Масштабирование с правильными параметрами
     scaleTextures();
@@ -1374,4 +1594,9 @@ void Game::updateSaucer()
     velocity.setY(qBound(-6, velocity.y(), 6));
 
     m_sprite_saucer->setVelocity(velocity);
+}
+
+bool Game::enemyExists() const
+{
+    return m_enemyExists;
 }
