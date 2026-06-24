@@ -48,7 +48,7 @@ Sprite* EnemySprite::addSprite()
     if (getPixmap().toImage() == m_batPixmap.toImage())
     {
         pSprite = new Sprite(m_missilePixmap, rcBounds, BA_DIE);
-        pSprite->setVelocity(0, 2 + rand() % 7);
+        pSprite->setVelocity(0, 1 + rand() % 4);
     }
 
     if (!pSprite)

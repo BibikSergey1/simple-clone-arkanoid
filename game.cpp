@@ -128,6 +128,7 @@ void Game::gameStart()
     m_bonusPixmaps[BONUS_RED_STAR] = &m_pixmap_bonus_red_star;
     m_bonusPixmaps[BONUS_GREEN_STAR] = &m_pixmap_bonus_green_star;
     m_bonusPixmaps[BONUS_BLUE_STAR] = &m_pixmap_bonus_blue_star;
+    m_bonusPixmaps[BONUS_LIFE] = &m_pixmap_bonus_life;
 
     for (int i = 0; i < BALLS; ++i)
         m_sprite_ball[i] = nullptr;
@@ -467,8 +468,12 @@ void Game::gamePaint(QPainter* p)
         {
             m_game_engine->drawSprites(p);
 
+            int startX = 10;
+            int spacing = m_pixmap_paddle_sm.width() + 5;
             for (int ii = 0; ii < m_num_lives; ++ii)
-                p->drawPixmap((m_width_wnd-(m_pixmap_paddle_sm.width()+7)*3)+((m_pixmap_paddle_sm.width()+5)*ii), 8, m_pixmap_paddle_sm);
+            {
+                p->drawPixmap(startX + ii * spacing, 8, m_pixmap_paddle_sm);
+            }
 
             drawWalls(p);
 
@@ -542,7 +547,8 @@ bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
     if((pHitter == m_pixmap_bonus_red_star
          || pHitter == m_pixmap_bonus_green_star
-         || pHitter == m_pixmap_bonus_blue_star) && pSpriteHittee == m_sprite_paddle)
+         || pHitter == m_pixmap_bonus_blue_star
+         || pHitter == m_pixmap_bonus_life) && pSpriteHittee == m_sprite_paddle)
     {
         collisBonusPaddle(pSpriteHitter, pSpriteHittee);
         return true;
@@ -846,6 +852,14 @@ void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             m_fastBallTimer->start(10000);
         }
     }
+    else if (pSpriteHitter->getPixmap() == m_pixmap_bonus_life)
+    {
+        const int MAX_LIVES = 5;
+        if (m_num_lives < MAX_LIVES)
+        {
+            ++m_num_lives;
+        }
+    }
 }
 
 void Game::collisBallSaucer(Sprite* pBall, Sprite* pSaucer)
@@ -917,6 +931,7 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
+    m_game_engine->cleanupSprites(m_pixmap_bonus_life);
     m_game_engine->cleanupSprites(m_pixmap_bat);
     m_game_engine->cleanupSprites(m_pixmap_missile_bat);
 
@@ -978,9 +993,10 @@ void Game::checkRandomBonus(Sprite* pSpriteHitter)
 
     static const std::vector<BonusOption> options =
     {
-        { BONUS_RED_STAR,   33 },   // 33%
-        { BONUS_GREEN_STAR, 33 },   // 33%
-        { BONUS_BLUE_STAR,  34 }    // 34%
+        { BONUS_RED_STAR,   25 },   // 25%
+        { BONUS_GREEN_STAR, 25 },   // 25%
+        { BONUS_BLUE_STAR,  25 },   // 25%
+        { BONUS_LIFE,       25 }    // 25%
     };
 
     int totalWeight = 0;
@@ -1229,6 +1245,7 @@ void Game::loseLife()
     m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
+    m_game_engine->cleanupSprites(m_pixmap_bonus_life);
 
     // Удаляем бомбы (врага оставляем, но если он есть, он будет удалён ниже)
     m_game_engine->cleanupSprites(m_pixmap_missile_bat);
@@ -1262,10 +1279,13 @@ void Game::loseLife()
     QPointer<Game> self(this);
     float velX = m_vel_x;
     float velY = m_vel_y;
-    QTimer::singleShot(1500, this, [self, velX, velY]() {
+    QTimer::singleShot(1500, this, [self, velX, velY]()
+    {
         if (self.isNull()) return;
-        for (auto it = self->m_game_engine->begin(); it != self->m_game_engine->end(); ++it) {
-            if ((*it)->getPixmap() == self->m_pixmap_ball) {
+        for (auto it = self->m_game_engine->begin(); it != self->m_game_engine->end(); ++it)
+        {
+            if ((*it)->getPixmap() == self->m_pixmap_ball)
+            {
                 (*it)->setVelocity(self->random(-velX, velX), -velY);
             }
         }
@@ -1315,24 +1335,31 @@ void Game::handleKeys(bool left, bool right, bool pause)
 
 void Game::processKeys()
 {
+    const int ACCELERATION = 2;   // шаг ускорения (было 1)
+    const int MAX_SPEED = PADDLE_MAX_SPEED; // например, 8
+
     QPoint ptVelocity = m_sprite_paddle->getVelocity();
-    if (m_left)
+
+    // Обрабатываем обе клавиши: если нажаты обе – скорость = 0 (нейтрально)
+    if (m_left && m_right)
     {
-        // Move left
-        ptVelocity.setX(qMax(ptVelocity.x() - 1, -PADDLE_MAX_SPEED));
-        m_sprite_paddle->setVelocity(ptVelocity);
+        ptVelocity.setX(0);
+    }
+    else if (m_left)
+    {
+        ptVelocity.setX(qMax(ptVelocity.x() - ACCELERATION, -MAX_SPEED));
     }
     else if (m_right)
     {
-        // Move right
-        ptVelocity.setX(qMin(ptVelocity.x() + 1, PADDLE_MAX_SPEED));
-        m_sprite_paddle->setVelocity(ptVelocity);
+        ptVelocity.setX(qMin(ptVelocity.x() + ACCELERATION, MAX_SPEED));
+    }
+    else
+    {
+        // Клавиши не нажаты – мгновенная остановка (можно оставить или добавить трение)
+        ptVelocity.setX(0);
     }
 
-    if(!m_right && !m_left)
-    {
-        m_sprite_paddle->setVelocity(0, m_sprite_paddle->getVelocity().y());
-    }
+    m_sprite_paddle->setVelocity(ptVelocity);
 }
 
 // Returns a random number in [low, high].
@@ -1400,6 +1427,8 @@ bool Game::loadTextures()
 
     m_pixmap_explosion = loadPixmap(":/images/LgExplosion.bmp");
     m_pixmap_explosion.setMask(m_pixmap_explosion.createMaskFromColor(QColor(252,0,252)));
+
+    m_pixmap_bonus_life = loadPixmap(":/images/life_star.png");
 
     // Масштабирование с правильными параметрами
     scaleTextures();

@@ -112,12 +112,14 @@ private:
     QPixmap m_pixmap_bat;
     QPixmap m_pixmap_missile_bat;
     QPixmap m_pixmap_explosion;
+    QPixmap m_pixmap_bonus_life;
 
     enum BonusType
     {
         BONUS_RED_STAR,
         BONUS_GREEN_STAR,
         BONUS_BLUE_STAR,
+        BONUS_LIFE,
         // ... сюда можно добавлять новые
         BONUS_COUNT
     };

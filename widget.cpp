@@ -113,7 +113,7 @@ void Widget::paintEvent(QPaintEvent *event)
 
     // Опционально: показываем FPS на экране
     p.setPen(Qt::green);
-    p.drawText(10, 16, QString("FPS: %1").arg(fps));
+    p.drawText(width() - 80, 16, QString("FPS: %1").arg(fps));
 }
 
 void Widget::timerEvent(QTimerEvent *event)

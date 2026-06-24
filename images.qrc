@@ -21,5 +21,6 @@
         <file>images/bat.png</file>
         <file>images/LgExplosion.bmp</file>
         <file>images/TMissile.bmp</file>
+        <file>images/life_star.png</file>
     </qresource>
 </RCC>
