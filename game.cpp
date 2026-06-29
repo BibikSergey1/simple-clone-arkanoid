@@ -48,7 +48,8 @@ void Game::resetPaddleWidth()
 
 void Game::disableFastBall()
 {
-    if (!m_fastBallActive) return;
+    if (!m_fastBallActive)
+        return;
     m_fastBallActive = false;
     m_currentMaxBallSpeed = MAX_BALL_SPEED;
 
@@ -179,11 +180,11 @@ void Game::createLevel()
     if (m_level == 1)
     {
         level =
-            "RRRRRRRRRRR"
-            "RBBBUUBBBBR"
-            " RBBBUBBBR "
-            "  RBBUBBR  "
-            "   RBUBR   "
+            "BBBBBBBBBBB"
+            "BBBBUUBBBBB"
+            " BBBBUBBBB "
+            "  BBBUBBB  "
+            "   BBUBB   "
             "    UUU    ";
     }
     else if (m_level == 2)
@@ -209,9 +210,8 @@ void Game::createLevel()
     else if (m_level == 4)
     {
         level =
-            "   RRRRRRR    "
-            "  RRRRRRRRR   "
-            " RRRRRRRRRRR  "
+            "              "
+            "              "
             "SSSSSSSSSSSSUU"
             "UUUSUUUUUSBUUB"
             "UUUSUUUUUSBUUB"
@@ -221,7 +221,8 @@ void Game::createLevel()
             "SUUBUUSUUBUUUB"
             "SUUUUUSUUUUUUB"
             "SUUUUUSUUUUUUB"
-            "SSSSSSSSSSSSSS";
+            "SSSSSSSSSSSSSS"
+            "              ";
     }
     else if(m_level == 5)
     {

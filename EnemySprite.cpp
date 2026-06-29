@@ -30,7 +30,11 @@ SPRITEACTION EnemySprite::update()
 
     if (m_game && m_game->isGameActive() && m_game->enemyExists())
     {
-        if ((rand() % 180) == 0)
+        // 180	3 сек	исходно
+        // 300	5 сек	реже
+        // 600	10 сек	значительно реже
+        // 900	15 сек	очень редко
+        if ((rand() % 300) == 0)
             sa = SA_ADDSPRITE;
     }
     return sa;
@@ -48,7 +52,11 @@ Sprite* EnemySprite::addSprite()
     if (getPixmap().toImage() == m_batPixmap.toImage())
     {
         pSprite = new Sprite(m_missilePixmap, rcBounds, BA_DIE);
-        pSprite->setVelocity(0, 1 + rand() % 4);
+        // Текущий	    2 + rand() % 7	2..8	Исходный
+        // Умеренный	2 + rand() % 4	2..5	Максимум 5, комфортно
+        // Медленный	1 + rand() % 4	1..4	Очень медленно, для обучения
+        // Средний	    2 + rand() % 5	2..6	Баланс
+        pSprite->setVelocity(0, 2 + rand() % 8);
     }
 
     if (!pSprite)
