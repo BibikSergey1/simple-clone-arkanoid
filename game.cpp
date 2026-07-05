@@ -224,6 +224,23 @@ void Game::createLevel()
             "SSSSSSSSSSSSSS"
             "              ";
     }
+    else if (m_level == 5)
+    {
+        level =
+            "                "
+            "                "
+            "BBBBBS    SBBBBB"
+            "BBBBBS    SBBBBB"
+            "BBSSSS    SSSSBB"
+            "BBSUUU    UUUSBB"
+            "BBSUUU    UUUSBB"
+            "BBSSSS    SSSSBB"
+            "BBBBBS    SBBBBB"
+            "BBBBBS    SBBBBB"
+            "SSSSSS    SSSSSS"
+            "                "
+            "                ";
+    }
     else if(m_level == 5)
     {
         m_game_win = true;
@@ -237,6 +254,11 @@ void Game::createLevel()
         m_num_block_rows += 7;
         m_num_block_cols += 3;
     }
+    else if (m_level == 5)
+    {
+        m_num_block_rows += 7;
+        m_num_block_cols += 5;
+    }
     int m_block_x_gap = BLOCK_X_GAP;
     int m_block_y_gap = BLOCK_Y_GAP;
     int m_block_origin_x = BLOCK_ORIGIN_X;
@@ -244,8 +266,12 @@ void Game::createLevel()
     {
         m_block_origin_x -= 16;
     }
+    else if (m_level == 5)
+    {
+        m_block_origin_x -= 90;
+    }
     int m_block_origin_y = BLOCK_ORIGIN_Y;
-    if (m_level == 4)
+    if (m_level == 4 || m_level == 5)
     {
         m_block_origin_y -= 50;
     }
