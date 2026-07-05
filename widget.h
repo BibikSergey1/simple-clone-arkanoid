@@ -36,7 +36,7 @@ static constexpr int BALL_MARGIN_RIGHT = BALL_GAP_RIGHT * 2;
 static constexpr int DELAY_MS = 1500;
 
 constexpr int BALL_SPEED = 4;  // 3 Умеренная скорость, 4 Быстрая скорость
-constexpr int MAX_BALL_SPEED = 6;
+constexpr int MAX_BALL_SPEED = 5;
 
 static constexpr int NUM_BLOCK_ROWS = 6;
 static constexpr int NUM_BLOCK_COLS = 11;

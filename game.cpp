@@ -229,6 +229,23 @@ void Game::createLevel()
         level =
             "                "
             "                "
+            "BBBBBBBBBBBBBBBB"
+            "SSSUUUUUUUUUUSSS"
+            "BBBBBBBBBBBBBBBB"
+            "BBBBBBBBBBBBBBBB"
+            "UUUUUUSSSUUUUUUU"
+            "BBBBBBBBBBBBBBBB"
+            "                "
+            "                "
+            "                "
+            "                "
+            "                ";
+    }
+    else if (m_level == 6)
+    {
+        level =
+            "                "
+            "                "
             "BBBBBS    SBBBBB"
             "BBBBBS    SBBBBB"
             "BBSSSS    SSSSBB"
@@ -241,7 +258,7 @@ void Game::createLevel()
             "                "
             "                ";
     }
-    else if(m_level == 5)
+    else if(m_level == 7)
     {
         m_game_win = true;
         return;
@@ -254,7 +271,7 @@ void Game::createLevel()
         m_num_block_rows += 7;
         m_num_block_cols += 3;
     }
-    else if (m_level == 5)
+    else if (m_level == 5 || m_level == 6)
     {
         m_num_block_rows += 7;
         m_num_block_cols += 5;
@@ -266,12 +283,12 @@ void Game::createLevel()
     {
         m_block_origin_x -= 16;
     }
-    else if (m_level == 5)
+    else if (m_level == 5 || m_level == 6)
     {
         m_block_origin_x -= 90;
     }
     int m_block_origin_y = BLOCK_ORIGIN_Y;
-    if (m_level == 4 || m_level == 5)
+    if (m_level == 4 || m_level == 5 || m_level == 6)
     {
         m_block_origin_y -= 50;
     }
@@ -1181,8 +1198,8 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             {
                 m_blockHitSound->play();
             }
-
         }
+
 
         if (m_count_blocks == 0)
         {
