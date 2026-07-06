@@ -221,8 +221,7 @@ void Game::createLevel()
             "SUUBUUSUUBUUUB"
             "SUUUUUSUUUUUUB"
             "SUUUUUSUUUUUUB"
-            "SSSSSSSSSSSSSS"
-            "              ";
+            "SSSSSSSSSSSSSS";
     }
     else if (m_level == 5)
     {
@@ -268,7 +267,7 @@ void Game::createLevel()
     int m_num_block_cols = NUM_BLOCK_COLS;
     if (m_level == 4)
     {
-        m_num_block_rows += 7;
+        m_num_block_rows += 6;
         m_num_block_cols += 3;
     }
     else if (m_level == 5 || m_level == 6)
@@ -294,11 +293,11 @@ void Game::createLevel()
     }
     int y1 = m_block_origin_y;
 
-    for(int row = 0; row < m_num_block_rows; ++row)
+    for (int row = 0; row < m_num_block_rows; ++row)
     {
         int x1 = m_block_origin_x;
 
-        for(int col = 0; col < m_num_block_cols; ++col)
+        for (int col = 0; col < m_num_block_cols; ++col)
         {
             QChar ch = level.at(col + row * m_num_block_cols);
             if(ch == ' ')
@@ -960,8 +959,10 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     removeEnemy();
 
     // Сброс эффекта зелёного бонуса (если активен)
-    if (m_paddleBonusActive) resetPaddleWidth();
-    if (m_fastBallActive) disableFastBall();
+    if (m_paddleBonusActive)
+        resetPaddleWidth();
+    if (m_fastBallActive)
+        disableFastBall();
 
     pSpriteHitter->kill();
     // Очистка мячей, блоков, бонусов, врага и бомб
@@ -979,8 +980,17 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_bat);
     m_game_engine->cleanupSprites(m_pixmap_missile_bat);
 
+    for (auto it =m_game_engine->begin(); it != m_game_engine->end(); ++it)
+    {
+        if ((*it)->getPixmap() == m_pixmap_block_solid)
+        {
+            (*it)->kill();
+        }
+    }
+
     // Обнуляем массив указателей на мячи
-    for (int i = 0; i < BALLS; ++i) m_sprite_ball[i] = nullptr;
+    for (int i = 0; i < BALLS; ++i)
+        m_sprite_ball[i] = nullptr;
 
     // Сброс тарелки для нового уровня
     if (m_sprite_saucer)
@@ -1199,7 +1209,6 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                 m_blockHitSound->play();
             }
         }
-
 
         if (m_count_blocks == 0)
         {
