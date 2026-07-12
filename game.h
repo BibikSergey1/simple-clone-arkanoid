@@ -181,6 +181,9 @@ private:
 
     QTimer* m_enemyRespawnTimer;
     bool m_enemyExists = false;
+
+    int m_paddleShieldFrames;  // количество кадров, в течение которых действует защита
+    static constexpr int SHIELD_DURATION = 12; // 12 кадров ≈ 0.2 секунды при 60 FPS
 };
 
 #endif // GAME_H

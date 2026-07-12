@@ -441,6 +441,8 @@ void Game::newGame()
     m_enemyRespawnTimer = new QTimer(this);
     m_enemyRespawnTimer->setSingleShot(true);
     connect(m_enemyRespawnTimer, &QTimer::timeout, this, &Game::respawnEnemy);
+
+    m_paddleShieldFrames = 0;
 }
 
 void Game::gameActivate()
@@ -539,7 +541,7 @@ void Game::gamePaint(QPainter* p)
             drawWalls(p);
 
             if (m_pause)
-                p->drawPixmap(m_width_wnd/2-m_pixmap_pause.width()/2, m_height_wnd/3, m_pixmap_pause);
+                p->drawPixmap(m_width_wnd/2-m_pixmap_pause.width()/2, m_height_wnd/2, m_pixmap_pause);
         }
         else
         {
@@ -581,6 +583,9 @@ void Game::gameCycle()
             }
         }
     }
+
+    if (m_paddleShieldFrames > 0)
+        m_paddleShieldFrames--;
 }
 
 bool Game::spriteCollision(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
@@ -694,11 +699,17 @@ void Game::collisBallMissile(Sprite* pBall, Sprite* pMissile)
 
 void Game::collisMissilePaddle(Sprite* pBall, Sprite* pMissile)
 {
-    createExplosion(pBall, pMissile);
-
     // Убиваем бомбу
     pMissile->kill();
-    // Потеря жизни
+    createExplosion(pBall, pMissile);
+
+    // Если мяч уже отскочил в этом кадре – не отнимаем жизнь
+    if (m_paddleShieldFrames > 0)
+    {
+        return;
+    }
+
+    // Иначе – потеря жизни
     loseLife();
 }
 
@@ -772,6 +783,8 @@ void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     //     и вызвать повторный отскок или залипание.
     pSpriteHitter->setPosition(pSpriteHitter->getPosition().x(),
                                pSpriteHitter->getPosition().y() - 2);
+
+    m_paddleShieldFrames = SHIELD_DURATION;
 }
 
 void Game::collisBonusPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
