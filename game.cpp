@@ -210,6 +210,40 @@ void Game::createLevel()
     else if (m_level == 4)
     {
         level =
+            "               "
+            "               "
+            "BBBBS     SBBBB"
+            "BBBBS     SBBBB"
+            "BSSSS     SSSSB"
+            "BSUUU     UUUSB"
+            "BSUUU     UUUSB"
+            "BSSSS     SSSSB"
+            "BBBBS     SBBBB"
+            "BBBBS     SBBBB"
+            "SSSSS     SSSSS"
+            "               "
+            "               ";
+    }
+    else if (m_level == 5)
+    {
+        level =
+            "               "
+            "               "
+            "BBBBBBBBBBBBBBB"
+            "SSSUUUUUUUUUSSS"
+            "BBBBBBBBBBBBBBB"
+            "BBBBBBBBBBBBBBB"
+            "UUUUUUSSSUUUUUU"
+            "BBBBBBBBBBBBBBB"
+            "               "
+            "               "
+            "               "
+            "               "
+            "               ";
+    }
+    else if (m_level == 6)
+    {
+        level =
             "              "
             "              "
             "SSSSSSSSSSSSUU"
@@ -223,40 +257,6 @@ void Game::createLevel()
             "SUUUUUSUUUUUUB"
             "SSSSSSSSSSSSSS";
     }
-    else if (m_level == 5)
-    {
-        level =
-            "                "
-            "                "
-            "BBBBBBBBBBBBBBBB"
-            "SSSUUUUUUUUUUSSS"
-            "BBBBBBBBBBBBBBBB"
-            "BBBBBBBBBBBBBBBB"
-            "UUUUUUSSSUUUUUUU"
-            "BBBBBBBBBBBBBBBB"
-            "                "
-            "                "
-            "                "
-            "                "
-            "                ";
-    }
-    else if (m_level == 6)
-    {
-        level =
-            "                "
-            "                "
-            "BBBBBS    SBBBBB"
-            "BBBBBS    SBBBBB"
-            "BBSSSS    SSSSBB"
-            "BBSUUU    UUUSBB"
-            "BBSUUU    UUUSBB"
-            "BBSSSS    SSSSBB"
-            "BBBBBS    SBBBBB"
-            "BBBBBS    SBBBBB"
-            "SSSSSS    SSSSSS"
-            "                "
-            "                ";
-    }
     else if(m_level == 7)
     {
         m_game_win = true;
@@ -267,29 +267,47 @@ void Game::createLevel()
     int m_num_block_cols = NUM_BLOCK_COLS;
     if (m_level == 4)
     {
+        m_num_block_rows += 7;
+        m_num_block_cols += 4;
+    }
+    else if (m_level == 5)
+    {
+        m_num_block_rows += 7;
+        m_num_block_cols += 4;
+    }
+    else if (m_level == 6)
+    {
         m_num_block_rows += 6;
         m_num_block_cols += 3;
     }
-    else if (m_level == 5 || m_level == 6)
-    {
-        m_num_block_rows += 7;
-        m_num_block_cols += 5;
-    }
     int m_block_x_gap = BLOCK_X_GAP;
     int m_block_y_gap = BLOCK_Y_GAP;
+
     int m_block_origin_x = BLOCK_ORIGIN_X;
     if (m_level == 4)
     {
+        m_block_origin_x -= 72;
+    }
+    else if (m_level == 5)
+    {
+        m_block_origin_x -= 72;
+    }
+    else if (m_level == 6)
+    {
         m_block_origin_x -= 16;
     }
-    else if (m_level == 5 || m_level == 6)
-    {
-        m_block_origin_x -= 90;
-    }
     int m_block_origin_y = BLOCK_ORIGIN_Y;
-    if (m_level == 4 || m_level == 5 || m_level == 6)
+    if (m_level == 4)
     {
         m_block_origin_y -= 50;
+    }
+    else if (m_level == 5)
+    {
+        m_block_origin_y -= 50;
+    }
+    else if (m_level == 6)
+    {
+        m_block_origin_y -= 56;
     }
     int y1 = m_block_origin_y;
 
@@ -727,10 +745,11 @@ void Game::collisBallPaddle(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     // 7. Текущая скорость (модуль)
     //    Вычисляем длину вектора скорости мяча до удара.
     QPoint oldVel = pSpriteHitter->getVelocity();
+
     double speed = std::hypot(oldVel.x(), oldVel.y());
     //    Ограничиваем скорость: минимум = BALL_SPEED * 1.25 (чуть выше стартовой),
     //    максимум = MAX_BALL_SPEED. Так мяч не будет слишком медленным или быстрым.
-    speed = qBound(static_cast<double>(BALL_SPEED) * 1.25, speed, static_cast<double>(MAX_BALL_SPEED));
+    speed = qBound(static_cast<double>(BALL_SPEED) * 1.25, speed, static_cast<double>(m_currentMaxBallSpeed));
 
     // 8. Новые компоненты скорости
     //    Пересчитываем скорость из желаемого модуля и угла.
@@ -980,9 +999,16 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_bat);
     m_game_engine->cleanupSprites(m_pixmap_missile_bat);
 
-    for (auto it =m_game_engine->begin(); it != m_game_engine->end(); ++it)
+    for (auto it = m_game_engine->begin(); it != m_game_engine->end(); ++it)
     {
-        if ((*it)->getPixmap() == m_pixmap_block_solid)
+        if (!*it)
+            continue;
+
+        if ((*it)->getPixmap() == m_pixmap_block_solid
+            || (*it)->getPixmap() == m_pixmap_block_2hit
+            || (*it)->getPixmap() == m_pixmap_block_damaged
+            || (*it)->getPixmap() == m_pixmap_block_blue
+            || (*it)->getPixmap() == m_pixmap_block)
         {
             (*it)->kill();
         }
