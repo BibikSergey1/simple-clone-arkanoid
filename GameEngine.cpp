@@ -61,6 +61,9 @@ void GameEngine::cleanupSprites(const QPixmap& pix)
     {
         if ((*siSprite)->getPixmap() == pix)
         {
+            if (!*siSprite)
+                continue;
+
             (*siSprite)->kill();
         }
     }

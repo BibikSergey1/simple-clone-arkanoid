@@ -1005,6 +1005,7 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_block_2hit);
     m_game_engine->cleanupSprites(m_pixmap_block_damaged);
     m_game_engine->cleanupSprites(m_pixmap_block_solid);
+    m_game_engine->cleanupSprites(m_pixmap_block_solid_flash);
     m_game_engine->cleanupSprites(m_pixmap_bonus_red_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_green_star);
     m_game_engine->cleanupSprites(m_pixmap_bonus_blue_star);
@@ -1020,6 +1021,7 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
         if ((*it)->getPixmap() == m_pixmap_block_solid
             || (*it)->getPixmap() == m_pixmap_block_2hit
             || (*it)->getPixmap() == m_pixmap_block_damaged
+            || (*it)->getPixmap() == m_pixmap_block_solid_flash
             || (*it)->getPixmap() == m_pixmap_block_blue
             || (*it)->getPixmap() == m_pixmap_block)
         {

@@ -34,7 +34,7 @@ SPRITEACTION EnemySprite::update()
         // 300	5 сек	реже
         // 600	10 сек	значительно реже
         // 900	15 сек	очень редко
-        if ((rand() % 300) == 0)
+        if ((rand() % 600) == 0)
             sa = SA_ADDSPRITE;
     }
     return sa;
