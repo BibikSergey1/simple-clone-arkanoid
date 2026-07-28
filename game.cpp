@@ -206,6 +206,14 @@ void Game::createLevel()
             "SBBBBBUBBBS"
             "SBBBUUBBBBS"
             "SSSSSSSSSSS";
+
+        // level =
+        //     "           "
+        //     "           "
+        //     "S         S"
+        //     "S    B    S"
+        //     "S         S"
+        //     "SSSSSSSSSSS";
     }
     else if (m_level == 4)
     {
@@ -1013,22 +1021,6 @@ void Game::createNewLevel(Sprite* pSpriteHitter)
     m_game_engine->cleanupSprites(m_pixmap_bat);
     m_game_engine->cleanupSprites(m_pixmap_missile_bat);
 
-    for (auto it = m_game_engine->begin(); it != m_game_engine->end(); ++it)
-    {
-        if (!*it)
-            continue;
-
-        if ((*it)->getPixmap() == m_pixmap_block_solid
-            || (*it)->getPixmap() == m_pixmap_block_2hit
-            || (*it)->getPixmap() == m_pixmap_block_damaged
-            || (*it)->getPixmap() == m_pixmap_block_solid_flash
-            || (*it)->getPixmap() == m_pixmap_block_blue
-            || (*it)->getPixmap() == m_pixmap_block)
-        {
-            (*it)->kill();
-        }
-    }
-
     // Обнуляем массив указателей на мячи
     for (int i = 0; i < BALLS; ++i)
         m_sprite_ball[i] = nullptr;
@@ -1114,15 +1106,19 @@ void Game::checkRandomBonus(Sprite* pSpriteHitter)
         accumulated += opt.weight;
     }
 
-    const int FALL_SPEED = 1;
+    const int FALL_SPEED = 2;
+
     Sprite* bonus = new Sprite(*m_bonusPixmaps[selectedType], m_bounds, BA_DIE, this);
     bonus->setPosition(pSpriteHitter->getPosition().topLeft());
     bonus->setVelocity(0, FALL_SPEED);
+    bonus->setNumFrames(8);
+    bonus->setFrameDelay(4);
     m_game_engine->addSprite(bonus);
 }
 
 void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 {
+    qDebug() << "Game::collisBallBricks============START";
     if (next_level)
         return;
 
@@ -1132,18 +1128,21 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
     // пробиваем любые не-solid блоки без отскока
     if (m_fastBallActive && !isSolid)
     {
+        qDebug() << "Game::collisBallBricks============FAST_BALL_START";
         // Уничтожаем блок (даже 2-hit или damaged – пробивается сразу)
         checkRandomBonus(pSpriteHitter);
         pSpriteHittee->kill();
         --m_count_blocks;
 
-        if (m_solidBlockHitSound && m_solidBlockHitSound->isLoaded())
+        if (m_blockHitSound && m_blockHitSound->isLoaded())
         {
             m_blockHitSound->play();
         }
 
         if (m_count_blocks == 0)
             createNewLevel(pSpriteHitter);
+
+        qDebug() << "Game::collisBallBricks============FAST_BALL_RETURN";
         return;  // мяч продолжает полёт, скорость не меняем
     }
 
@@ -1189,9 +1188,11 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
 
     if (collided)
     {
+        qDebug() << "Game::collisBallBricks============collided_START";
         // Мерцание для неразрушимого блока (solid)
         if (isSolid)
         {
+            qDebug() << "Game::collisBallBricks============isSolid_START";
             // Воспроизводим звук
             if (!m_solidBlockHitSound->isLoaded())
             {
@@ -1207,11 +1208,19 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
             // Заменяем на текстуру-вспышку
             pSpriteHittee->setPixmap(m_pixmap_block_solid_flash);
             // Через 100 мс возвращаем оригинал
-            QTimer::singleShot(100, this, [pSpriteHittee, originalPix]()
+            QPointer<Sprite> safeHittee = pSpriteHittee;
+            QTimer::singleShot(100, this, [safeHittee, originalPix]()
             {
-                if (pSpriteHittee)
-                    pSpriteHittee->setPixmap(originalPix);
+                if (!safeHittee.isNull())
+                {
+                    safeHittee->setPixmap(originalPix);
+                }
+                else
+                {
+                    qDebug() << "Solid block was deleted before timer fired";
+                }
             });
+            qDebug() << "Game::collisBallBricks============isSolid_END";
         }
 
         // Ограничиваем скорость после отскока
@@ -1228,6 +1237,7 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
         // Обработка типов блоков (только если не solid)
         if (!isSolid)
         {
+            qDebug() << "Game::collisBallBricks============NOT_isSolid_START";
             if (blockPix == m_pixmap_block_2hit)
             {
                 pSpriteHittee->setPixmap(m_pixmap_block_damaged);
@@ -1245,17 +1255,20 @@ void Game::collisBallBricks(Sprite* pSpriteHitter, Sprite* pSpriteHittee)
                 --m_count_blocks;
             }
 
-            if (m_solidBlockHitSound && m_solidBlockHitSound->isLoaded())
+            if (m_blockHitSound && m_blockHitSound->isLoaded())
             {
                 m_blockHitSound->play();
             }
+            qDebug() << "Game::collisBallBricks============NOT_isSolid_END";
         }
 
         if (m_count_blocks == 0)
         {
             createNewLevel(pSpriteHitter);
         }
+        qDebug() << "Game::collisBallBricks============collided_END";
     }
+    qDebug() << "Game::collisBallBricks============END";
 }
 
 void Game::addEnemy()

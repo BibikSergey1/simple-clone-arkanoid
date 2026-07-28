@@ -61,9 +61,6 @@ void GameEngine::cleanupSprites(const QPixmap& pix)
     {
         if ((*siSprite)->getPixmap() == pix)
         {
-            if (!*siSprite)
-                continue;
-
             (*siSprite)->kill();
         }
     }
@@ -114,7 +111,16 @@ void GameEngine::updateSprites()
         if (action == SA_KILL)
         {
             Game::getInstance()->spriteDying(sprite);
-            delete sprites_.takeAt(i);  // удаляем и забираем из списка
+            auto sprite = sprites_.takeAt(i);
+            if (sprite)
+            {
+                qDebug() << "GameEngine::updateSprites()===========START_DELETE_SPRITE";
+                qDebug() << "GameEngine::updateSprites()===========START_DELETE_SPRITE sprite = " << sprite;
+                delete sprite;  // удаляем и забираем из списка
+                sprite = nullptr;
+                qDebug() << "GameEngine::updateSprites()=============END_DELETE_SPRITE sprite = " << sprite;
+                qDebug() << "GameEngine::updateSprites()=============END_DELETE_SPRITE";
+            }
             // i не увеличиваем — на место i встал следующий элемент
             continue;
         }

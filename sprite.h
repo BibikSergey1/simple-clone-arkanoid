@@ -52,6 +52,8 @@ public:
 
     void setWidth(int width);
 
+    int id() const { return m_id; }
+
 protected:
     QPixmap pixmap_;
 
@@ -71,6 +73,9 @@ protected:
 
     bool dying_;
     bool one_cycle_;
+
+    static int s_nextId;
+    int m_id;
 
     // Helper Methods
     virtual void  calcCollisionRect();

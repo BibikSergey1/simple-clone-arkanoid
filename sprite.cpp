@@ -2,6 +2,8 @@
 #include <QPainter>
 #include <QDebug>
 
+int Sprite::s_nextId = 0;
+
 Sprite::Sprite(QPixmap pixmap, QObject* parent)
     : QObject(parent)
     , pixmap_(pixmap)
@@ -17,6 +19,7 @@ Sprite::Sprite(QPixmap pixmap, QObject* parent)
     , hidden_(false)
     , dying_(false)
     , one_cycle_(false)
+    , m_id(++s_nextId)
 {
     calcCollisionRect();
 }
@@ -36,6 +39,7 @@ Sprite::Sprite(QPixmap pixmap, QRect rect_bounds,
     , hidden_(false)
     , dying_(false)
     , one_cycle_(false)
+    , m_id(++s_nextId)
 {
     // Calculate a random position
     int xpos = qrand() % (rect_bounds.right() - rect_bounds.left());
@@ -48,6 +52,10 @@ Sprite::Sprite(QPixmap pixmap, QRect rect_bounds,
 
 Sprite::~Sprite()
 {
+    qDebug() << "~Sprite() id=" << m_id
+             << "addr=" << this
+             << "pos=" << getPosition()
+             << "pixmap=" << (pixmap_.isNull() ? "null" : QString("%1x%2").arg(pixmap_.width()).arg(pixmap_.height()));
 }
 
 void Sprite::calcCollisionRect()
