@@ -218,31 +218,31 @@ void Game::createLevel()
     else if (m_level == 4)
     {
         level =
-            "               "
-            "               "
-            "BBBBS     SBBBB"
-            "BBBBS     SBBBB"
-            "BSSSS     SSSSB"
-            "BSUUU     UUUSB"
-            "BSUUU     UUUSB"
-            "BSSSS     SSSSB"
-            "BBBBS     SBBBB"
-            "BBBBS     SBBBB"
-            "SSSSS     SSSSS"
-            "               "
-            "               ";
+            "                "
+            "                "
+            " BBBBSU  USBBBB "
+            " BBBBSU  USBBBB "
+            " BSSSSU  USSSSB "
+            " BSBBBU  UBBBSB "
+            " BSBBBUUUUBBBSB "
+            " BSSSS   USSSSB "
+            " BBBBS   USBBBB "
+            " BBBBS   USBBBB "
+            " BSSSS   USSSSB "
+            "                "
+            "                ";
     }
     else if (m_level == 5)
     {
         level =
             "               "
             "               "
-            "BBBBBBBBBBBBBBB"
-            "SSSUUUUUUUUUSSS"
-            "BBBBBBBBBBBBBBB"
-            "BBBBBBBBBBBBBBB"
-            "UUUUUUSSSUUUUUU"
-            "BBBBBBBBBBBBBBB"
+            "BBBBBUUUUUUBBBB"
+            "SSSBBUUBBBBBSSS"
+            "BBBBBUUUUUUBBBB"
+            "BUUBBBBBBUUBUUB"
+            "BUUBBBSSSUUBUUB"
+            "BBBBBUUUUUUBBBB"
             "               "
             "               "
             "               "
@@ -255,14 +255,14 @@ void Game::createLevel()
             "              "
             "              "
             "SSSSSSSSSSSSUU"
-            "UUUSUUUUUSBUUB"
-            "UUUSUUUUUSBUUB"
-            "UUUSUUUUUSBUUB"
             "UUUSUUUUUSBBBB"
-            "SUUSUUSUUSUUUB"
-            "SUUBUUSUUBUUUB"
-            "SUUUUUSUUUUUUB"
-            "SUUUUUSUUUUUUB"
+            "UUUSUUUUUSBUUB"
+            "UUUSUUUUUSBUUU"
+            "UUUSUUSUUSBUUU"
+            "SUUSUUSUUSBBBB"
+            "SUUSUUSUUSBUUB"
+            "SUUUUUSUUUBUUB"
+            "SUUUUUSUUUBBBB"
             "SSSSSSSSSSSSSS";
     }
     else if(m_level == 7)
@@ -276,7 +276,7 @@ void Game::createLevel()
     if (m_level == 4)
     {
         m_num_block_rows += 7;
-        m_num_block_cols += 4;
+        m_num_block_cols += 5;
     }
     else if (m_level == 5)
     {
@@ -294,11 +294,11 @@ void Game::createLevel()
     int m_block_origin_x = BLOCK_ORIGIN_X;
     if (m_level == 4)
     {
-        m_block_origin_x -= 72;
+        m_block_origin_x -= 100;
     }
     else if (m_level == 5)
     {
-        m_block_origin_x -= 72;
+        m_block_origin_x -= 80;
     }
     else if (m_level == 6)
     {

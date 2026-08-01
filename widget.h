@@ -7,7 +7,7 @@
 namespace
 {
 constexpr int CELL_SIZE = 32;
-constexpr int GRID_GAP = 1;
+constexpr int GRID_GAP = 0;
 constexpr int WOLLS_GAP = 2;
 
 constexpr int GRID_ROWS = 20;
@@ -42,7 +42,7 @@ static constexpr int NUM_BLOCK_ROWS = 6;
 static constexpr int NUM_BLOCK_COLS = 11;
 static constexpr int BLOCK_X_GAP = BLOCK_SIZE.width() + GRID_GAP;
 static constexpr int BLOCK_Y_GAP = BLOCK_SIZE.height() + GRID_GAP;
-static constexpr int BLOCK_ORIGIN_X = BLOCK_SIZE.width() * 2 + BLOCK_SIZE.height();
+static constexpr int BLOCK_ORIGIN_X = BLOCK_SIZE.width() * 3/* + BLOCK_SIZE.height()*/;
 static constexpr int BLOCK_ORIGIN_Y = 160;
 
 static constexpr int UP_MARGIN = 8;
