@@ -184,6 +184,9 @@ private:
 
     int m_paddleShieldFrames;  // количество кадров, в течение которых действует защита
     static constexpr int SHIELD_DURATION = 12; // 12 кадров ≈ 0.2 секунды при 60 FPS
+
+    int m_solidOnlyHits = 0;          // счётчик подряд идущих столкновений только с solid
+    static const int SOLID_HIT_LIMIT = 30;  // порог для применения сильного возмущения
 };
 
 #endif // GAME_H
