@@ -54,6 +54,8 @@ public:
 
     int id() const { return m_id; }
 
+    bool isAlive() const { return !dying_; }
+
 protected:
     QPixmap pixmap_;
 

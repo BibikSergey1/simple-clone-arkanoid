@@ -15,22 +15,38 @@ GameEngine::~GameEngine()
 
 bool GameEngine::checkSpriteCollision(Sprite* pTestSprite)
 {
-    if (!pTestSprite)
+    if (!pTestSprite || !pTestSprite->isAlive())
         return false;
 
-    // Копируем список указателей, чтобы итерация не ломалась при удалениях
-    QList<Sprite*> spritesCopy = sprites_;
-    for (Sprite* pOther : spritesCopy)
+    // Собираем все спрайты, с которыми есть пересечение (и которые живы)
+    QList<Sprite*> collidedWith;
+    for (Sprite* pOther : qAsConst(sprites_))
     {
-        if (pTestSprite == pOther)
+        if (pOther == pTestSprite || !pOther || !pOther->isAlive())
             continue;
 
         if (pTestSprite->testCollision(pOther))
         {
-            return Game::getInstance()->spriteCollision(pOther, pTestSprite);
+            collidedWith.append(pOther);
         }
     }
-    return false;
+
+    if (collidedWith.isEmpty())
+        return false;
+
+    // Обрабатываем каждое столкновение
+    bool anyCollision = false;
+    for (Sprite* pOther : collidedWith)
+    {
+        // Повторно проверяем, что оба объекта ещё живы (могли быть убиты в предыдущей обработке)
+        if (pTestSprite->isAlive() && pOther->isAlive())
+        {
+            if (Game::getInstance()->spriteCollision(pOther, pTestSprite))
+                anyCollision = true;
+        }
+    }
+
+    return anyCollision;
 }
 
 void GameEngine::addSprite(Sprite* pSprite)
@@ -114,12 +130,8 @@ void GameEngine::updateSprites()
             auto sprite = sprites_.takeAt(i);
             if (sprite)
             {
-                qDebug() << "GameEngine::updateSprites()===========START_DELETE_SPRITE";
-                qDebug() << "GameEngine::updateSprites()===========START_DELETE_SPRITE sprite = " << sprite;
-                delete sprite;  // удаляем и забираем из списка
+                delete sprite;
                 sprite = nullptr;
-                qDebug() << "GameEngine::updateSprites()=============END_DELETE_SPRITE sprite = " << sprite;
-                qDebug() << "GameEngine::updateSprites()=============END_DELETE_SPRITE";
             }
             // i не увеличиваем — на место i встал следующий элемент
             continue;
